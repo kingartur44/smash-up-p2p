@@ -1,4 +1,5 @@
 import { CardType } from "../../data/CardType"
+import { GenericPositions as GenericPosition } from "../../game/cards/CardEffects"
 import { generateSet } from "../utils"
 import { Faction } from "./Factions"
 
@@ -30,6 +31,7 @@ const Set = generateSet(Faction.Dinosaurs, [
 		initializeEffects: (card, gameState) => {
 			card.registerEffect({
 				type: "power-boost",
+				positionRequirement: GenericPosition.Field,
 				callback: `(card, gameState) => {
 					if (gameState.turnPlayerId !== card.controller_id) {
 						return 2
@@ -50,6 +52,7 @@ const Set = generateSet(Faction.Dinosaurs, [
 		initializeEffects: (card, gameState) => {
 			card.registerEffect({
 				type: "power-boost",
+				positionRequirement: GenericPosition.Field,
 				callback: `(card, gameState) => {
 					const raptorCurrentBase = (card as MinionGameCard).card_current_base
 					if (!raptorCurrentBase) {
@@ -88,7 +91,7 @@ const Set = generateSet(Faction.Dinosaurs, [
 		type: CardType.Action,
 		quantityInDeck: 2,
 
-		name: "Howl ",
+		name: "Howl",
 		description: "Each of your minions gains +1 power until the end of your turn"
 	},
 

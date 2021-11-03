@@ -118,6 +118,7 @@ export class BaseGameCard extends GameCard {
 	static fromDatabaseCard(gameState: GameState, databaseCard: BaseDatabaseCard): BaseGameCard {
 		const card = new BaseGameCard(gameState);
 		card.database_card_id = databaseCard.id;
+		card.initializeEffects()
 		return card;
 	}
 

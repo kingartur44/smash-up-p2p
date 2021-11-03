@@ -13,17 +13,20 @@ const Set = generateSet(Faction.Aliens, [
 		description: "You may return a minion to its owner’s hand.",
 		power: 5,
 		initializeEffects: async (card, gameState) => {
-			gameState.addEffectToQueue(card.id, `async (card, gameState) => {
-				const target = await gameState.pickTarget({
-					cardType: [${CardType.Minion}],
-					minionFilter: {
-						position: [
-							"on-the-board"
-						]
-					}
-				}, "Scegli un minion da far tornare in mano", true)
-				target?.returnToOwnerHand()
-			}`)
+			card.registerEffect({
+				type: "on-play",
+				callback: `async (card, gameState) => {
+					const target = await gameState.pickTarget({
+						cardType: [${CardType.Minion}],
+						minionFilter: {
+							position: [
+								"on-the-board"
+							]
+						}
+					}, "Scegli un minion da far tornare in mano", true)
+					target?.returnToOwnerHand()
+				}`
+			})
 		}
 	},
 	{
@@ -34,12 +37,15 @@ const Set = generateSet(Faction.Aliens, [
 		description: "Gain 1 VP.",
 		power: 3,
 		initializeEffects: (card, gameState) => {
-			gameState.addEffectToQueue(card.id, `async (card, gameState) => {
-				const controller = card.controller
-				if (controller) {
-					controller.victoryPoints += 1
-				}
-			}`)
+			card.registerEffect({
+				type: "on-play",
+				callback: `async (card, gameState) => {
+					const controller = card.controller
+					if (controller) {
+						controller.victoryPoints += 1
+					}
+				}`
+			})
 		}
 	},
 	{
@@ -59,27 +65,30 @@ const Set = generateSet(Faction.Aliens, [
 		description: "You may return a non-Collector minion of power 3 or less on this base to its owner’s hand.",
 		power: 2,
 		initializeEffects: async (card, gameState) => {
-			gameState.addEffectToQueue(card.id, `async (card, gameState) => {
-				const target = await gameState.pickTarget({
-					cardType: [${CardType.Minion}],
-					filters: {
-						position: [
-							"on-the-board"
-						],
-						name: {
-							operator: "!=",
-							value: "Collector"
+			card.registerEffect({
+				type: "on-play",
+				callback: `async (card, gameState) => {
+					const target = await gameState.pickTarget({
+						cardType: [${CardType.Minion}],
+						filters: {
+							position: [
+								"on-the-board"
+							],
+							name: {
+								operator: "!=",
+								value: "Collector"
+							}
+						},
+						minionFilter: {
+							power: {
+								operator: "<=",
+								value: 3
+							}
 						}
-					},
-					minionFilter: {
-						power: {
-							operator: "<=",
-							value: 3
-						}
-					}
-				}, "Scegli un minion da far tornare in mano", true)
-				target?.returnToOwnerHand()
-			}`)
+					}, "Scegli un minion da far tornare in mano", true)
+					target?.returnToOwnerHand()
+				}`
+			})
 		}
 	},
 

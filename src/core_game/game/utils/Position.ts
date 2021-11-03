@@ -1,9 +1,9 @@
 import { PlayerID } from "../GameState"
 
-export type Position = NoPosition | HandPosition | DeckPosition | BasePosition | BoardPosition
+export type Position = NoPosition | HandPosition | DeckPosition | BasePosition | BoardPosition | DiscardPilePosition
 
 export function isPosition(data: any): data is Position {
-	return isNoPosition(data) || isHandPosition(data) || isDeckPosition(data) || isBasePosition(data) || isBoardPosition(data)
+	return isNoPosition(data) || isHandPosition(data) || isDeckPosition(data) || isBasePosition(data) || isBoardPosition(data) || isDiscardPilePosition(data)
 }
 
 interface NoPosition {
@@ -19,6 +19,15 @@ interface HandPosition {
 }
 export function isHandPosition(data: any): data is HandPosition {
 	return data.postion === "hand" &&
+		typeof data.playerID === "number"
+}
+
+interface DiscardPilePosition {
+	position: "discard-pile"
+	playerID: PlayerID
+}
+export function isDiscardPilePosition(data: any): data is DiscardPilePosition {
+	return data.postion === "discard-pile" &&
 		typeof data.playerID === "number"
 }
 

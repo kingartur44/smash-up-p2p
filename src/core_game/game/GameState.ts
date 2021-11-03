@@ -291,10 +291,7 @@ export class GameState {
 				}
 
 				this.moveCard(card_id, newPosition)
-				if (card.databaseCard.initializeEffects) {
-					card.databaseCard.initializeEffects(card, this)
-				}
-				
+				card.onPlay()
 			}
 		}
 	}

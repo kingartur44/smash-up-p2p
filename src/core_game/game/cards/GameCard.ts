@@ -6,7 +6,8 @@ import { ActionGameCard } from "./ActionGameCard"
 import { MinionGameCard } from "./MinionGameCard"
 import { CardType } from "../../data/CardType"
 import { GamePlayer } from "../GamePlayer"
-import { GameCardEffect } from "./CardEffects"
+import { GameCardEffect, GenericPositions } from "./CardEffects"
+import { transpile } from "typescript"
 
 type CardId = number
 
@@ -56,11 +57,49 @@ export abstract class GameCard {
 	}
 
 	initializeEffects() {
-		
+		if (this.databaseCard.initializeEffects) {
+			this.databaseCard.initializeEffects(this, this.gameState)
+		}
 	}
 
 	registerEffect(effect: GameCardEffect) {
 		this.effects.push(effect)
+	}
+
+	onPlay() {
+		this.queryEffects("on-play")
+			.forEach(effect => {
+				const callback = eval(transpile(effect.callback))
+				callback(this, this.gameState)
+			})
+	}
+
+	queryEffects(effectType: string) {
+		return this.effects
+			.filter(effect => {
+				if (effect.type !== effectType) {
+					return false
+				}
+				if ("positionRequirement" in effect) {
+					const isRightPosition = (() => {
+						switch (effect.positionRequirement) {
+							case GenericPositions.Deck:
+								return this.position.position === "deck"
+							case GenericPositions.DiscardPile:
+								return this.position.position === "discard-pile"
+							case GenericPositions.Field:
+								return ["field", "base"].includes(this.position.position)
+							case GenericPositions.Hand:
+								return this.position.position === "hand"
+						}
+					})()
+					if (!isRightPosition) {
+						return false
+					}
+				}
+				
+				return true
+			})
 	}
 
 	get owner(): GamePlayer | null {

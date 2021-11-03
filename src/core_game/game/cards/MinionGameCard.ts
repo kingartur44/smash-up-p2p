@@ -51,8 +51,7 @@ export class MinionGameCard extends GameCard {
 	
 	override get power() {
 		let cardPower = this.databaseCard.power
-		this.effects
-			.filter(effect => effect.type === "power-boost")
+		this.queryEffects("power-boost")
 			.forEach(effect => {
 				const callback = eval(transpile(effect.callback))
 				cardPower += callback(this, this.gameState)
@@ -100,6 +99,7 @@ export class MinionGameCard extends GameCard {
 	static fromDatabaseCard(gameState: GameState, databaseCard: MinionDatabaseCard): MinionGameCard {
 		const card = new MinionGameCard(gameState);
 		card.database_card_id = databaseCard.id;
+		card.initializeEffects()
 		return card;
 	}
 
