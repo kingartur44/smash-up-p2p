@@ -30,32 +30,30 @@ export const Card: FC<CardProps> = observer(({card, style}) => {
 		return card.isPlayable
 	}, [gameState.isClientOwnerTurn, card.isPlayable])
 
-	const gameStateCurrentActionPossibleTargets = (() => {
-		if (gameState.currentAction.type === GameCurrentActionType.ChooseTarget) {
-			return gameState.currentAction.possibleTargets
-		}
-		return []		
-	})()
-
-	const isATargetCard = useMemo(() => {
-		if (selectedCard === null) {
-			return false
-		}
-		if (gameState.cards[selectedCard].targets.includes(card.id)) {
-			return true
-		}
-		
-		if (gameState.currentAction.type === GameCurrentActionType.ChooseTarget) {
-			if (gameStateCurrentActionPossibleTargets.includes(card.id)) {
+	const isATargetCard = (() => {
+		if (selectedCard !== null) {
+			if (gameState.cards[selectedCard].targets.includes(card.id)) {
 				return true
 			}
 		}
+		
+		if (gameState.currentAction.type === GameCurrentActionType.ChooseTarget) {
+			if (gameState.currentAction.possibleTargets.includes(card.id)) {
+				return true
+			} 
+		}
 
 		return false
-	}, [gameState.cards, selectedCard, card.id, gameState.currentAction, gameStateCurrentActionPossibleTargets])
+	})()
 
 	const clickOnCard = () => {
-		if (card.position.position === "hand") {
+		if (gameState.currentAction.type === GameCurrentActionType.ChooseTarget) {
+			gameServer.sendGameMessage({
+				type: "pick_target",
+				cardId: card.id,
+				playerID: gameServer.playerID,
+			})
+		} else if (card.position.position === "hand") {
 			if (!playable) {
 				return
 			}
@@ -73,12 +71,6 @@ export const Card: FC<CardProps> = observer(({card, style}) => {
 				})
 				setSelectedCard(null)
 			}
-		} else if (gameState.currentAction.type === GameCurrentActionType.ChooseTarget) {
-			gameServer.sendGameMessage({
-				type: "pick_target",
-				cardId: card.id,
-				playerID: gameServer.playerID,
-			})
 		}
 	}
 
@@ -98,11 +90,10 @@ export const Card: FC<CardProps> = observer(({card, style}) => {
 
 	if (card.isBaseCard()) {
 		const playerPowers = card.sortedPlayersPower.map(({player, power}) => {
-				return <span style={{color: player.color, paddingLeft: 10}}>
-					{power}
-				</span>
-			})
-
+			return <span style={{color: player.color, paddingLeft: 10}}>
+				{power}
+			</span>
+		})
 
 		return <div data-tooltip={tooltip} className={className} style={style} onClick={clickOnCard}>
 			{card.databaseCard.name} - Breakpoint {card.totalPowerOnBase} / {card.breakpoint} - {playerPowers}

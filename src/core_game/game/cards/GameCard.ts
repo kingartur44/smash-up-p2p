@@ -46,7 +46,7 @@ export abstract class GameCard {
 	}
 
 	returnToOwnerHand() {
-		if (!this.owner_id) {
+		if (this.owner_id === null) {
 			return
 		}
 		this.gameState.moveCard(this.id, {

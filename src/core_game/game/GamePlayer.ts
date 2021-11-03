@@ -38,7 +38,9 @@ export class GamePlayer {
 		this.discardPile = [];
 		this.factions = [];
 
-		makeAutoObservable(this);
+		makeAutoObservable(this, {
+			gameState: false
+		});
 	}
 
 	setFactions(factions: string[]) {

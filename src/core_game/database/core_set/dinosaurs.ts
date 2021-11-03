@@ -58,14 +58,15 @@ const Set = generateSet(Faction.Dinosaurs, [
 	
 					const warRaptors = gameState.queryManager.executeQuery({
 						cardType: [${CardType.Minion}],
-						minionFilter: {
+						filters: {
 							position: [{
 								position: "base",
 								base_id: raptorCurrentBase.id
-							}]
-						},
-						filters: {
-							name: ["War Raptor"]
+							}],
+							name: {
+								operator: "=",
+								value: "War Raptor"
+							}
 						}
 					})
 					

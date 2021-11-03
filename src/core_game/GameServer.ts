@@ -16,7 +16,9 @@ export class GameServer {
 		this.connectionManager = new ConnectionManager(this)
 		this.gameState = new GameState(this)
 
-		makeAutoObservable(this)
+		makeAutoObservable(this, {
+			gameState: false
+		})
 	}
 
 	tick() {

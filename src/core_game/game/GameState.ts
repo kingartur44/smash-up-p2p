@@ -9,7 +9,7 @@ import { BaseGameCard } from "./cards/BaseGameCard"
 import { GamePlayer } from "./GamePlayer"
 import { Position } from "./utils/Position"
 import { GameQuery, GameQueryManager } from "./GameQueryManager"
-import { transpile } from "typescript"
+import { ScriptTarget, transpile } from "typescript"
 
 export type PlayerID = number
 export type GameCardId = number
@@ -37,7 +37,8 @@ export type GameAction = {
 	type: GameCurrentActionType.ChooseTarget,
 	possibleTargets: GameCardId[]
 	prompt: string
-	sendTargetCallback: (card_id: GameCardId) => void
+	canSelectNull: boolean
+	sendTargetCallback: (card_id: GameCardId | null) => void
 }
 
 
@@ -51,7 +52,7 @@ export class GameState {
 
 	currentAction: GameAction
 	
-	activatedEffectQueue: string[]
+	activatedEffectQueue: {card_id: number, effect: string}[]
 
 	cardNextId: GameCardId
 	cards: Record<GameCardId, GameCard>
@@ -108,8 +109,11 @@ export class GameState {
 		if (this.activatedEffectQueue.length > 0) {
 			let nextEffect = this.activatedEffectQueue.pop()
 			if (nextEffect) {
-				const callback = eval(transpile(nextEffect))
-				callback(this)
+				const card = this.getCard(nextEffect.card_id)
+				const callback = eval(transpile(nextEffect.effect, {
+					target: ScriptTarget.ESNext
+				}))
+				callback(card, this)
 			}
 		}
 
@@ -226,28 +230,41 @@ export class GameState {
 		return this.cards[card_id]
 	}
 
-	async pickTarget(query: GameQuery, prompt: string): Promise<GameCard | undefined> {
+	async pickTarget(query: GameQuery, prompt: string, canSelectNull: boolean): Promise<GameCard | null> {
 		const possibleTargets = this.queryManager.executeQuery(query)
 		if (possibleTargets.length === 0) {
-			return undefined
+			return null
 		}
 
 		return new Promise(resolve => {
 			this.currentAction = {
 				type: GameCurrentActionType.ChooseTarget,
 				prompt: prompt,
+				canSelectNull: canSelectNull,
 				sendTargetCallback: (card_id) => {
+					if (card_id === null) {
+						if (canSelectNull) {
+							resolve(null)
+							this.currentAction = {
+								type: GameCurrentActionType.None
+							}
+						}
+						return
+					}
 					if (possibleTargets.includes(card_id)) {
-						resolve(this.cards[card_id])
-					}	
+						resolve(this.getCard(card_id))
+						this.currentAction = {
+							type: GameCurrentActionType.None
+						}
+					}
 				},
 				possibleTargets: possibleTargets
 			}
 		})
 	}
 
-	addEffectToQueue(effect: string) {
-		this.activatedEffectQueue.push(effect)
+	addEffectToQueue(card_id: number, effect: string) {
+		this.activatedEffectQueue.push({ card_id, effect })
 	}
 
 	playCard(card_id: number, playerID: PlayerID, newPosition: Position) {
