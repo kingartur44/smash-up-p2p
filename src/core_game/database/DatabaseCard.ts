@@ -1,76 +1,73 @@
+import { CardType } from "../data/CardType"
+import { GameCard } from "../game/cards/GameCard"
 import { GameState } from "../game/GameState"
 
 export interface DatabaseCard {
-	type: "minion" | "base" | "action" | "titan"
+	type: CardType
 	id: string
 	name: string
 	description: string
 	faction: string
-	effects?: Effects
+	initializeEffects?: (card: GameCard, gameState: GameState) => void
 }
 
-type Effects = (gameState: GameState) => {
-	onPlay?: () => void
-}
 
 export class MinionDatabaseCard implements DatabaseCard {
-	type: "minion"
+	type: CardType.Minion
 	id: string
 	name: string
 	description: string
 	faction: string
 
-	effects?: Effects
+	initializeEffects?: (card: GameCard, gameState: GameState) => void
 
 	power: number
 	
-	constructor({id, name, description, faction, power, effects}: {id: string, name: string, description: string, faction: string, effects?: Effects} & {power: number}) {
-		this.type = "minion"
+	constructor({id, name, description, faction, power, initializeEffects}: {id: string, name: string, description: string, faction: string, initializeEffects?: (card: GameCard, gameState: GameState) => void} & {power: number}) {
+		this.type = CardType.Minion
 		this.id = id
 		this.name = name
 		this.description = description
 		this.faction = faction
 		this.power = power
-		this.effects = effects
+		this.initializeEffects = initializeEffects
 	}
 }
 
 export class ActionDatabaseCard implements DatabaseCard {
-	type: "action"
+	type: CardType.Action
 	id: string
 	name: string
 	description: string
 	faction: string
 
-	effects?: Effects
+	initializeEffects?: (card: GameCard, gameState: GameState) => void
 
-	power: number
 	
-	constructor({id, name, description, faction, power, effects}: {id: string, name: string, description: string, faction: string, effects?: Effects} & {power: number}) {
-		this.type = "action"
+	constructor({id, name, description, faction, initializeEffects}: {id: string, name: string, description: string, faction: string, initializeEffects?: (card: GameCard, gameState: GameState) => void}) {
+		this.type = CardType.Action
 		this.id = id
 		this.name = name
 		this.description = description
 		this.faction = faction
-		this.power = power
-		this.effects = effects
+		this.initializeEffects = initializeEffects
 	}
 }
 
 export class BaseDatabaseCard implements DatabaseCard {
-	type: "base"
+	type: CardType.Base
 	id: string
 	name: string
 	description: string
 	faction: string
 
-	effects?: Effects
+	initializeEffects?: (card: GameCard, gameState: GameState) => void
 
 	breakpoint: number
 	points: number[]
 	
-	constructor({id, name, description, faction, breakpoint, points, effects}: {id: string, name: string, description: string, faction: string, effects?: Effects} & { breakpoint: number, points: number[] }) {
-		this.type = "base"
+	constructor({id, name, description, faction, breakpoint, points, initializeEffects}: {id: string, name: string, description: string, faction: string, initializeEffects?: (card: GameCard, gameState: GameState) => void} & { breakpoint: number, points: number[] }) {
+		this.type = CardType.Base
 
 		this.id = id
 		this.name = name
@@ -79,6 +76,6 @@ export class BaseDatabaseCard implements DatabaseCard {
 
 		this.breakpoint = breakpoint
 		this.points = points
-		this.effects = effects
+		this.initializeEffects = initializeEffects
 	}
 }

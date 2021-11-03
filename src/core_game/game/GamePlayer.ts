@@ -1,7 +1,7 @@
 import { makeAutoObservable } from "mobx";
 import { shuffleArray } from "../../utils/shuffleArray";
 import { Aliens, Dinosaurs } from "../database/core_set/core_set";
-import { Factions } from "../database/core_set/Factions";
+import { Faction } from "../database/core_set/Factions";
 import { GameState } from "./GameState";
 
 
@@ -45,11 +45,11 @@ export class GamePlayer {
 		this.factions = factions;
 		this.deck = [];
 		for (const faction of factions) {
-			if (faction === Factions.Aliens) {
+			if (faction === Faction.Aliens) {
 				this.deck = this.deck.concat(Aliens.map(databaseCard => {
 					const card = this.gameState.generateCard(databaseCard)
-					card.owner = this.id;
-					card.controller = this.id;
+					card.owner_id = this.id;
+					card.controller_id = this.id;
 					card.position = {
 						position: "deck",
 						playerID: this.id
@@ -57,11 +57,11 @@ export class GamePlayer {
 					return card.id
 				}))
 			}
-			if (faction === Factions.Dinosaurs) {
+			if (faction === Faction.Dinosaurs) {
 				this.deck = this.deck.concat(Dinosaurs.map(databaseCard => {
 					const card = this.gameState.generateCard(databaseCard)
-					card.owner = this.id;
-					card.controller = this.id;
+					card.owner_id = this.id;
+					card.controller_id = this.id;
 					card.position = {
 						position: "deck",
 						playerID: this.id

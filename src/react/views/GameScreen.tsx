@@ -6,6 +6,7 @@ import { CurrentPlayerScreen } from './CurrentPlayerScreen';
 import { GameScreenContext, useGameScreenContext } from './GameScreenContext';
 import { Card } from '../components/Card';
 import { BaseGameCard } from "../../core_game/game/cards/BaseGameCard";
+import { PromptsScreen } from './PromptsScreen';
 
 interface GameScreenProps {
 	gameServer: GameServer;
@@ -30,6 +31,7 @@ export const GameScreen: FC<GameScreenProps> = observer(({ gameServer }) => {
 			"leaderboard board board"
 			"current-player current-player current-player"`
 		}}>
+			<PromptsScreen />
 			<OtherPlayersScreen style={{
 				gridArea: "other-players",
 				borderBottom: "1px solid white",

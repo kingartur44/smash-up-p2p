@@ -1,53 +1,57 @@
 import { ActionDatabaseCard } from "../../database/DatabaseCard";
 import { Cards } from "../../database/core_set/core_set";
-import { makeAutoObservable } from "mobx";
-import { Position } from "../utils/Position";
-import { GamePhase, GameState, PlayerID } from "../GameState";
-import { BaseGameCard } from "./BaseGameCard";
+import { action, computed, makeObservable, observable } from "mobx";
+import { GameCurrentActionType, GamePhase, GameState } from "../GameState";
 import { GameCard } from "./GameCard";
-import { MinionGameCard } from "./MinionGameCard";
+import { CardType } from "../../data/CardType";
 
 
-export class ActionGameCard implements GameCard {
-	gameState: GameState;
+export class ActionGameCard extends GameCard {
 
-	id: number;
-	position: Position;
-	type: "action";
-	owner: PlayerID | null;
-	controller: PlayerID | null;
+	type: CardType.Action;
+
 	database_card_id: string;
 
 	constructor(gameState: GameState) {
-		this.gameState = gameState;
+		super(gameState)
 
-		this.id = -1;
-		this.position = {
-			position: "no-position"
-		};
-		this.type = "action";
-		this.owner = null;
-		this.controller = null;
+
+		this.type = CardType.Action;
 
 		this.database_card_id = "";
-		makeAutoObservable(this);
+		
+		makeObservable(this, {
+			id: observable,
+			type: observable,
+			position: observable,
+			owner_id: observable,
+			controller_id: observable,
+			effects: observable,
+
+			power: computed,
+			databaseCard: computed,
+			targets: computed,
+			isPlayable: computed,
+			owner: computed,
+			controller: computed,
+
+			returnToOwnerHand: action,
+			initializeEffects: action,
+			registerEffect: action
+		});
 	}
 
-	get databaseCard(): ActionDatabaseCard {
+	override get databaseCard(): ActionDatabaseCard {
 		return Cards[this.database_card_id] as ActionDatabaseCard;
 	}
 
-	get power() {
+	override get power() {
 		return 0;
 	}
 
-	static fromDatabaseCard(gameState: GameState, databaseCard: ActionDatabaseCard): ActionGameCard {
-		const card = new ActionGameCard(gameState);
-		card.database_card_id = databaseCard.id;
-		return card;
-	}
+	
 
-	get targets(): number[] {
+	override get targets(): number[] {
 		let targets = [];
 		for (const card of Object.values(this.gameState.cards)) {
 			if (card.isBaseCard() || card.isMinionCard()) {
@@ -57,13 +61,16 @@ export class ActionGameCard implements GameCard {
 		return targets;
 	}
 
-	get isPlayable(): boolean {
+
+	override get isPlayable(): boolean {
 		if (this.position.position === "hand") {
 			if (this.targets.length > 0) {
 				if (this.position.playerID === this.gameState.turnPlayerId) {
 					if (this.gameState.turnPlayer.actionPlays > 0) {
 						if (this.gameState.phase === GamePhase.GameTurn_Play) {
-							return true;
+							if (this.gameState.currentAction.type === GameCurrentActionType.None) {
+								return true;
+							}
 						}
 					}
 				}
@@ -73,23 +80,20 @@ export class ActionGameCard implements GameCard {
 		return false;
 	}
 
-	isMinionCard(): this is MinionGameCard {
-		return false;
+
+	static fromDatabaseCard(gameState: GameState, databaseCard: ActionDatabaseCard): ActionGameCard {
+		const card = new ActionGameCard(gameState);
+		card.database_card_id = databaseCard.id;
+		return card;
 	}
 
-	isActionCard(): this is ActionGameCard {
-		return true;
-	}
-
-	isBaseCard(): this is BaseGameCard {
-		return false;
-	}
 
 	serialize(): any {
 		return {
 			id: this.id,
-			owner: this.owner,
-			controller: this.controller,
+			effects: this.effects,
+			owner_id: this.owner_id,
+			controller_id: this.controller_id,
 			type: this.type,
 			position: this.position,
 			database_card_id: this.database_card_id
@@ -98,8 +102,9 @@ export class ActionGameCard implements GameCard {
 
 	deserialize(input: any) {
 		this.id = input.id;
-		this.owner = input.owner;
-		this.controller = input.controller;
+		this.effects = input.effects;
+		this.owner_id = input.owner_id;
+		this.controller_id = input.controller_id;
 		this.type = input.type;
 		this.position = input.position;
 		this.database_card_id = input.database_card_id;

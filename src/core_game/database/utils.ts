@@ -1,0 +1,102 @@
+import { CardType } from "../data/CardType";
+import { GameCard } from "../game/cards/GameCard";
+import { GameState } from "../game/GameState";
+import { Faction } from "./core_set/Factions";
+import { ActionDatabaseCard, BaseDatabaseCard, DatabaseCard, MinionDatabaseCard } from "./DatabaseCard";
+
+
+
+export interface MinionDatabaseCardPrototype {
+	type: CardType.Minion
+	quantityInDeck: number
+
+	name: string
+	description: string
+	initializeEffects?: (card: GameCard, gameState: GameState) => void
+
+	power: number
+}
+
+export interface ActionDatabaseCardPrototype {
+	type: CardType.Action
+	quantityInDeck: number
+
+	name: string
+	description: string
+	initializeEffects?: (card: GameCard, gameState: GameState) => void
+
+}
+export interface BaseDatabaseCardPrototype {
+	type: CardType.Base
+	quantityInDeck: number
+
+	name: string
+	description: string
+	initializeEffects?: (card: GameCard, gameState: GameState) => void
+
+	breakpoint: number
+	points: number[]
+}
+
+type DatabaseCardPrototypes = MinionDatabaseCardPrototype | ActionDatabaseCardPrototype | BaseDatabaseCardPrototype
+
+interface GenerateSetOutput {
+	cards: Record<string, DatabaseCard>
+	deck: DatabaseCard[]
+}
+
+export function generateSet(faction: Faction, prototypes: DatabaseCardPrototypes[]): GenerateSetOutput {
+	const cards: Record<string, DatabaseCard> = {}
+	const deck: DatabaseCard[] = []
+
+	let counter = 0
+	for (const prototype of prototypes) {
+		let card_id = `${faction.toLocaleLowerCase()}-${counter}-${prototype.name.toLocaleLowerCase().replaceAll(" ", "-")}`
+		counter++
+
+		const card = (() => {
+			switch (prototype.type) {
+				case CardType.Minion: {
+					return new MinionDatabaseCard({
+						id: card_id,
+						description: prototype.description,
+						faction: faction,
+						name: prototype.name,
+						power: prototype.power,
+						initializeEffects: prototype.initializeEffects
+					})
+				}
+				case CardType.Action: {
+					return new ActionDatabaseCard({
+						id: card_id,
+						description: prototype.description,
+						faction: faction,
+						name: prototype.name,
+						initializeEffects: prototype.initializeEffects
+					})
+				}
+				case CardType.Base: {
+					return new BaseDatabaseCard({
+						id: card_id,
+						description: prototype.description,
+						faction: faction,
+						name: prototype.name,
+						initializeEffects: prototype.initializeEffects,
+						breakpoint: prototype.breakpoint,
+						points: prototype.points
+					})
+				}
+			}
+		})()
+
+		cards[card_id] = card
+		for (let i = 0; i < prototype.quantityInDeck; i++) {
+			deck.push(card)
+		} 
+	}
+
+	return {
+		cards,
+		deck
+	}
+}

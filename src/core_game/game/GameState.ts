@@ -1,14 +1,18 @@
 import { makeAutoObservable, observable } from "mobx"
 import { DatabaseCard } from "../database/DatabaseCard"
 import { Bases } from "../database/core_set/core_set"
-import { Factions } from "../database/core_set/Factions"
+import { Faction } from "../database/core_set/Factions"
 import { GameServer } from "../GameServer"
-import { fromDatabaseCard, GameCard, gameCardDeserializer } from "./cards/GameCard"
+import { GameCard } from "./cards/GameCard"
+import { fromDatabaseCard, gameCardDeserializer } from "./cards/game_card_utils"
 import { BaseGameCard } from "./cards/BaseGameCard"
 import { GamePlayer } from "./GamePlayer"
 import { Position } from "./utils/Position"
+import { GameQuery, GameQueryManager } from "./GameQueryManager"
+import { transpile } from "typescript"
 
 export type PlayerID = number
+export type GameCardId = number
 
 export enum GamePhase {
 	FactionSelect,
@@ -22,28 +26,43 @@ export enum GamePhase {
 }
 
 
-export enum GameCurrentAction {
+export enum GameCurrentActionType {
 	None,
 	ChooseTarget
 }
 
+export type GameAction = {
+	type: GameCurrentActionType.None
+} | {
+	type: GameCurrentActionType.ChooseTarget,
+	possibleTargets: GameCardId[]
+	prompt: string
+	sendTargetCallback: (card_id: GameCardId) => void
+}
+
+
+
 export class GameState {
 	server: GameServer
+	queryManager: GameQueryManager
 
 	haveToInitPhase: boolean
 	phase: GamePhase
 
-	currentAction: GameCurrentAction
+	currentAction: GameAction
+	
+	activatedEffectQueue: string[]
 
-	cardNextId: number
-	cards: Record<number, GameCard>
+	cardNextId: GameCardId
+	cards: Record<GameCardId, GameCard>
 
 	players: GamePlayer[]
 	turnPlayerId: PlayerID
-	bases: number[]
+	bases: GameCardId[]
 
 	constructor(server: GameServer) {
 		this.server = server
+		this.queryManager = new GameQueryManager(this)
 
 		this.cardNextId = 0
 		this.cards = observable.object({}, {
@@ -74,19 +93,33 @@ export class GameState {
 		this.haveToInitPhase = true
 		this.phase = GamePhase.FactionSelect
 
+		this.activatedEffectQueue = []
+
+		this.currentAction = observable.object({
+			type: GameCurrentActionType.None
+		})
+
 		makeAutoObservable(this, {
 			server: false
 		})
 	}
 
 	nextStep() {
+		if (this.activatedEffectQueue.length > 0) {
+			let nextEffect = this.activatedEffectQueue.pop()
+			if (nextEffect) {
+				const callback = eval(transpile(nextEffect))
+				callback(this)
+			}
+		}
+
 		switch (this.phase) {
 			case GamePhase.FactionSelect: {
-				this.players[0].setFactions([Factions.Aliens])
+				this.players[0].setFactions([Faction.Aliens])
 				this.players[0].name = "Giocatore 1"
 				this.players[0].color = "aqua"
 
-				this.players[1].setFactions([Factions.Dinosaurs])
+				this.players[1].setFactions([Faction.Dinosaurs])
 				this.players[1].name = "Giocatore 2"
 				this.players[1].color = "orange"
 
@@ -189,8 +222,32 @@ export class GameState {
 		}
 	}
 
-	getCard(card_id: number): GameCard | undefined {
+	getCard(card_id: number): GameCard | null {
 		return this.cards[card_id]
+	}
+
+	async pickTarget(query: GameQuery, prompt: string): Promise<GameCard | undefined> {
+		const possibleTargets = this.queryManager.executeQuery(query)
+		if (possibleTargets.length === 0) {
+			return undefined
+		}
+
+		return new Promise(resolve => {
+			this.currentAction = {
+				type: GameCurrentActionType.ChooseTarget,
+				prompt: prompt,
+				sendTargetCallback: (card_id) => {
+					if (possibleTargets.includes(card_id)) {
+						resolve(this.cards[card_id])
+					}	
+				},
+				possibleTargets: possibleTargets
+			}
+		})
+	}
+
+	addEffectToQueue(effect: string) {
+		this.activatedEffectQueue.push(effect)
 	}
 
 	playCard(card_id: number, playerID: PlayerID, newPosition: Position) {
@@ -216,11 +273,11 @@ export class GameState {
 					}
 				}
 
-				const base = this.cards[newPosition.base_id] as BaseGameCard
-				this.removeCardFromItsPosition(card_id)
-
-				base.attached_cards.push(card_id)
-				card.position = newPosition
+				this.moveCard(card_id, newPosition)
+				if (card.databaseCard.initializeEffects) {
+					card.databaseCard.initializeEffects(card, this)
+				}
+				
 			}
 		}
 	}
@@ -233,6 +290,15 @@ export class GameState {
 				this.players[position.playerID].hand = this.players[position.playerID].hand.filter(cardID => cardID !== gameCard.id)
 				break
 			}
+			case "base": {
+				const base = this.getCard(position.base_id) as BaseGameCard
+				if (!base) {
+					throw new Error(`The card [${position.base_id}] does not exist`)
+				}
+
+				base.attached_cards = base.attached_cards.filter(cardID => cardID !== gameCard.id)
+				break
+			}
 			default: {
 				throw new Error("Non Implementato")
 			}
@@ -242,10 +308,43 @@ export class GameState {
 		}
 	}
 
+	moveCard(cardID: number, newPosition: Position) {
+		this.removeCardFromItsPosition(cardID)
+		const card = this.getCard(cardID)
+		if (!card) {
+			throw new Error(`The card [${cardID}] does not exist`)
+		}
+
+		switch (newPosition.position) {
+			case "base": {
+				const base = this.getCard(newPosition.base_id) as BaseGameCard
+				if (!base) {
+					throw new Error(`The card [${newPosition.base_id}] does not exist`)
+				}
+
+				base.attached_cards.push(cardID)
+				card.position = newPosition
+				break
+			}
+			case "hand": {
+				const player = this.players[newPosition.playerID]
+				if (!player) {
+					throw new Error(`The player [${newPosition.playerID}] does not exist`)
+				}
+
+				player.hand.push(cardID)
+				card.position = newPosition
+				break
+			}
+		}
+	}
+
 	serialize(): string {
 		return JSON.stringify({
 			players: this.players.map(player => player.serialize()),
 			phase: this.phase,
+			currentAction: this.currentAction,
+			activatedEffectQueue: this.activatedEffectQueue,
 			bases: this.bases,
 			cards: Object.fromEntries(Object.entries(this.cards).map(([cardId, card]) => {
 				return [cardId, card.serialize()]
@@ -258,6 +357,8 @@ export class GameState {
 		const data = JSON.parse(input)
 		data.players.forEach((player: any, index: number) => this.players[index].deserialize(player))
 		this.phase = data.phase
+		this.currentAction = data.currentAction
+		this.activatedEffectQueue = data.activatedEffectQueue
 		this.bases = data.bases
 		this.cards = Object.fromEntries(Object.entries(data.cards).map(([cardId, card]) => {
 			return [cardId, gameCardDeserializer({

@@ -1,53 +1,66 @@
 import { MinionDatabaseCard } from "../../database/DatabaseCard";
 import { Cards } from "../../database/core_set/core_set";
-import { makeAutoObservable } from "mobx";
-import { Position } from "../utils/Position";
-import { GamePhase, GameState, PlayerID } from "../GameState";
-import { BaseGameCard } from "./BaseGameCard";
-import { ActionGameCard } from "./ActionGameCard";
+import { action, computed, makeObservable, observable } from "mobx";
+import { GameCurrentActionType, GamePhase, GameState } from "../GameState";
+import { CardType } from "../../data/CardType";
 import { GameCard } from "./GameCard";
+import { transpile } from "typescript";
+import { BaseGameCard } from "./BaseGameCard";
 
 
-export class MinionGameCard implements GameCard {
-	gameState: GameState;
-
-	id: number;
-	position: Position;
-	type: "minion";
-	owner: PlayerID | null;
-	controller: PlayerID | null;
+export class MinionGameCard extends GameCard {
+	
+	type: CardType.Minion;
 	database_card_id: string;
 
 	constructor(gameState: GameState) {
+		super(gameState) 
+
 		this.gameState = gameState;
-
-		this.id = -1;
-		this.position = {
-			position: "no-position"
-		};
-		this.type = "minion";
-		this.owner = null;
-		this.controller = null;
-
+		this.type = CardType.Minion;
 		this.database_card_id = "";
-		makeAutoObservable(this);
+
+		makeObservable(this, {
+			id: observable,
+			type: observable,
+			position: observable,
+			owner_id: observable,
+			controller_id: observable,
+			effects: observable,
+
+			power: computed,
+			databaseCard: computed,
+			targets: computed,
+			isPlayable: computed,
+			owner: computed,
+			controller: computed,
+
+			returnToOwnerHand: action,
+			initializeEffects: action,
+			registerEffect: action,
+
+			// Specifici di minion
+			card_current_base: computed
+		});
 	}
 
-	get databaseCard(): MinionDatabaseCard {
+	override get databaseCard(): MinionDatabaseCard {
 		return Cards[this.database_card_id] as MinionDatabaseCard;
 	}
 
-	static fromDatabaseCard(gameState: GameState, databaseCard: MinionDatabaseCard): MinionGameCard {
-		const card = new MinionGameCard(gameState);
-		card.database_card_id = databaseCard.id;
-		return card;
+	
+	override get power() {
+		let cardPower = this.databaseCard.power
+		this.effects
+			.filter(effect => effect.type === "power-boost")
+			.forEach(effect => {
+				const callback = eval(transpile(effect.callback))
+				cardPower += callback(this, this.gameState)
+			})
+		return cardPower
 	}
 
-	get power() {
-		return this.databaseCard.power;
-	}
-
-	get targets(): number[] {
+	override get targets(): number[] {
 		let targets = [];
 		for (const card of Object.values(this.gameState.cards)) {
 			if (card.isBaseCard()) {
@@ -57,13 +70,16 @@ export class MinionGameCard implements GameCard {
 		return targets;
 	}
 
-	get isPlayable(): boolean {
+
+	override get isPlayable(): boolean {
 		if (this.position.position === "hand") {
 			if (this.targets.length > 0) {
 				if (this.position.playerID === this.gameState.turnPlayerId) {
 					if (this.gameState.turnPlayer.minionPlays > 0) {
 						if (this.gameState.phase === GamePhase.GameTurn_Play) {
-							return true;
+							if (this.gameState.currentAction.type === GameCurrentActionType.None) {
+								return true;
+							}
 						}
 					}
 				}
@@ -72,24 +88,27 @@ export class MinionGameCard implements GameCard {
 
 		return false;
 	}
-
-	isMinionCard(): this is MinionGameCard {
-		return true;
+	
+	get card_current_base(): BaseGameCard | undefined {
+		if (this.position.position !== "base") {
+			return undefined
+		}
+		return this.gameState.getCard(this.position.base_id) as BaseGameCard 
 	}
 
-	isActionCard(): this is ActionGameCard {
-		return false;
-	}
 
-	isBaseCard(): this is BaseGameCard {
-		return false;
+	static fromDatabaseCard(gameState: GameState, databaseCard: MinionDatabaseCard): MinionGameCard {
+		const card = new MinionGameCard(gameState);
+		card.database_card_id = databaseCard.id;
+		return card;
 	}
 
 	serialize(): any {
 		return {
 			id: this.id,
-			owner: this.owner,
-			controller: this.controller,
+			effects: this.effects,
+			owner_id: this.owner_id,
+			controller_id: this.controller_id,
 			type: this.type,
 			position: this.position,
 			database_card_id: this.database_card_id
@@ -98,8 +117,9 @@ export class MinionGameCard implements GameCard {
 
 	deserialize(input: any) {
 		this.id = input.id;
-		this.owner = input.owner;
-		this.controller = input.controller;
+		this.effects = input.effects;
+		this.owner_id = input.owner_id;
+		this.controller_id = input.controller_id;
 		this.type = input.type;
 		this.position = input.position;
 		this.database_card_id = input.database_card_id;

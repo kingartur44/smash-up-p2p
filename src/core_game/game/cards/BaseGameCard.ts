@@ -1,54 +1,76 @@
 import { BaseDatabaseCard } from "../../database/DatabaseCard";
 import { Cards } from "../../database/core_set/core_set";
-import { makeAutoObservable } from "mobx";
-import { Position } from "../utils/Position";
+import { action, computed, makeObservable, observable } from "mobx";
 import { GameState, PlayerID } from "../GameState";
 import { GameCard } from "./GameCard";
-import { MinionGameCard } from "./MinionGameCard";
-import { ActionGameCard } from "./ActionGameCard";
 import { GamePlayer } from "../GamePlayer";
+import { CardType } from "../../data/CardType";
 
 
-export class BaseGameCard implements GameCard {
-	gameState: GameState;
+export class BaseGameCard extends GameCard {
 
-	id: number;
-	position: Position;
-	type: "base";
-	owner: PlayerID | null;
-	controller: PlayerID | null;
+	type: CardType.Base;
+
 	database_card_id: string;
 	attached_cards: number[];
 
 	constructor(gameState: GameState) {
-		this.gameState = gameState;
+		super(gameState)
 
-		this.id = -1;
-		this.position = {
-			position: "no-position"
-		};
-		this.type = "base";
-		this.owner = null;
-		this.controller = null;
+		this.type = CardType.Base;
+
 		this.database_card_id = "";
 		this.attached_cards = [];
 
-		makeAutoObservable(this);
+		makeObservable(this, {
+			id: observable,
+			type: observable,
+			position: observable,
+			owner_id: observable,
+			controller_id: observable,
+			effects: observable,
+
+			power: computed,
+			databaseCard: computed,
+			targets: computed,
+			isPlayable: computed,
+			owner: computed,
+			controller: computed,
+
+			returnToOwnerHand: action,
+			initializeEffects: action,
+			registerEffect: action,
+
+			// Custom
+			breakpoint: computed,
+			totalPowerOnBase: computed,
+			playerBasedPowerOnBase: computed,
+			sortedPlayersPower: computed,
+			database_card_id: observable,
+			attached_cards: observable
+		});
 	}
 
-	get databaseCard(): BaseDatabaseCard {
+	override get databaseCard(): BaseDatabaseCard {
 		return Cards[this.database_card_id] as BaseDatabaseCard;
 	}
 
-	static fromDatabaseCard(gameState: GameState, databaseCard: BaseDatabaseCard): BaseGameCard {
-		const card = new BaseGameCard(gameState);
-		card.database_card_id = databaseCard.id;
-		return card;
-	}
 
-	get power(): number {
+
+	override get power(): number {
 		return 0;
 	}
+
+
+	override get targets(): number[] {
+		return [];
+	}
+
+
+	override get isPlayable(): boolean {
+		return false;
+	}
+
 
 	get breakpoint(): number {
 		return this.databaseCard.breakpoint;
@@ -67,7 +89,7 @@ export class BaseGameCard implements GameCard {
 
 		for (const card_id of this.attached_cards) {
 			const card = this.gameState.getCard(card_id);
-			const cardController = card?.controller
+			const cardController = card?.controller_id
 			if (cardController === undefined || cardController === null) {
 				continue
 			}
@@ -92,31 +114,19 @@ export class BaseGameCard implements GameCard {
 		return sortedPlayersPower
 	}
 
-	get targets(): number[] {
-		return [];
-	}
 
-	get isPlayable(): boolean {
-		return false;
-	}
-
-	isMinionCard(): this is MinionGameCard {
-		return false;
-	}
-
-	isActionCard(): this is ActionGameCard {
-		return false;
-	}
-
-	isBaseCard(): this is BaseGameCard {
-		return true;
+	static fromDatabaseCard(gameState: GameState, databaseCard: BaseDatabaseCard): BaseGameCard {
+		const card = new BaseGameCard(gameState);
+		card.database_card_id = databaseCard.id;
+		return card;
 	}
 
 	serialize(): any {
 		return {
 			id: this.id,
-			owner: this.owner,
-			controller: this.controller,
+			effects: this.effects,
+			owner_id: this.owner_id,
+			controller_id: this.controller_id,
 			type: this.type,
 			position: this.position,
 			database_card_id: this.database_card_id,
@@ -126,8 +136,9 @@ export class BaseGameCard implements GameCard {
 
 	deserialize(input: any) {
 		this.id = input.id;
-		this.owner = input.owner;
-		this.controller = input.controller;
+		this.effects = input.effects;
+		this.owner_id = input.owner_id;
+		this.controller_id = input.controller_id;
 		this.type = input.type;
 		this.position = input.position;
 		this.database_card_id = input.database_card_id;

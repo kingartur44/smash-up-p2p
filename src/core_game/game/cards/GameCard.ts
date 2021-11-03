@@ -1,68 +1,92 @@
-import { ActionDatabaseCard, BaseDatabaseCard, DatabaseCard, MinionDatabaseCard } from "../../database/DatabaseCard"
+import { DatabaseCard } from "../../database/DatabaseCard"
 import { Position } from "../utils/Position"
 import { GameState, PlayerID } from "../GameState"
 import { BaseGameCard } from "./BaseGameCard"
 import { ActionGameCard } from "./ActionGameCard"
 import { MinionGameCard } from "./MinionGameCard"
+import { CardType } from "../../data/CardType"
+import { GamePlayer } from "../GamePlayer"
+import { GameCardEffect } from "./CardEffects"
 
 type CardId = number
 
-export interface GameCard {
+export abstract class GameCard {
+	gameState: GameState;
+
 	id: CardId
 	position: Position
-
-	type: "minion" | "base" | "action" | "titan"
-	owner: PlayerID | null
-	controller: PlayerID | null
-
-	serialize: () => any
-	deserialize: (input: any) => void
-	databaseCard: DatabaseCard
-
-	power: number
-
-	targets: CardId[]
-	isPlayable: boolean
-
-	isMinionCard: () => this is MinionGameCard
-	isActionCard: () => this is ActionGameCard
-	isBaseCard: () => this is BaseGameCard
-}
-
-export function fromDatabaseCard({gameState, input}: {gameState: GameState, input: DatabaseCard}): GameCard {
-	if (input instanceof MinionDatabaseCard) {
-		return MinionGameCard.fromDatabaseCard(gameState, input)
-	}
-	if (input instanceof ActionDatabaseCard) {
-		return ActionGameCard.fromDatabaseCard(gameState, input)
-	}
-	if (input instanceof BaseDatabaseCard) {
-		return BaseGameCard.fromDatabaseCard(gameState, input)
-	}
+	owner_id: PlayerID | null
+	controller_id: PlayerID | null
+	effects: GameCardEffect[]
 	
-	throw new Error("Card not supported")
-}
+	abstract type: CardType
 
-export function gameCardDeserializer({gameState, input}: {gameState: GameState, input: any}) {
-	switch (input.type) {
-		case "minion": {
-			const card = new MinionGameCard(gameState)
-			card.deserialize(input)
-			return card
+	abstract get power(): number
+	abstract get databaseCard(): DatabaseCard
+
+	abstract get targets(): CardId[]
+	abstract get isPlayable(): boolean
+
+
+	abstract serialize(): any
+	abstract deserialize(input: any): void
+	
+
+	constructor(gameState: GameState) {
+		this.gameState = gameState
+
+		this.id = -1
+		this.position = {
+			position: "no-position"
 		}
-		case "action": {
-			const card = new ActionGameCard(gameState)
-			card.deserialize(input)
-			return card
+		this.effects = []
+
+		this.owner_id = null;
+		this.controller_id = null;
+	}
+
+	returnToOwnerHand() {
+		if (!this.owner_id) {
+			return
 		}
-		case "base": {
-			const card = new BaseGameCard(gameState)
-			card.deserialize(input)
-			return card
+		this.gameState.moveCard(this.id, {
+			position: "hand",
+			playerID: this.owner_id
+		})
+	}
+
+	initializeEffects() {
+		
+	}
+
+	registerEffect(effect: GameCardEffect) {
+		this.effects.push(effect)
+	}
+
+	get owner(): GamePlayer | null {
+		if (this.owner_id === null) {
+			return null
 		}
-		default: {
-			throw new Error("Card not supported")
+		return this.gameState.players[this.owner_id]
+	}
+	get controller(): GamePlayer | null {
+		if (this.controller_id === null) {
+			return null
 		}
+		return this.gameState.players[this.controller_id]
+	}
+
+	// Controlli di classe per typescript
+	isMinionCard(): this is MinionGameCard {
+		return this.type === CardType.Minion;
+	}
+
+	isActionCard(): this is ActionGameCard {
+		return this.type === CardType.Action;
+	}
+
+	isBaseCard(): this is BaseGameCard {
+		return this.type === CardType.Base;
 	}
 }
 

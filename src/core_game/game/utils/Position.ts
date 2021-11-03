@@ -22,7 +22,7 @@ export function isHandPosition(data: any): data is HandPosition {
 		typeof data.playerID === "number"
 }
 
-interface DeckPosition {
+export interface DeckPosition {
 	position: "deck"
 	playerID: PlayerID
 }
@@ -31,7 +31,7 @@ export function isDeckPosition(data: any): data is DeckPosition {
 		typeof data.playerID === "number"
 }
 
-interface BasePosition {
+export interface BasePosition {
 	position: "base"
 	base_id: number
 }

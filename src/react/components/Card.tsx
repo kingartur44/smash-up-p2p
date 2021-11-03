@@ -1,7 +1,8 @@
 import { observer } from "mobx-react-lite";
 import { FC, useMemo } from "react";
+import { CardType } from "../../core_game/data/CardType";
 import { GameCard } from "../../core_game/game/cards/GameCard";
-import { PlayerID } from "../../core_game/game/GameState";
+import { GameCurrentActionType } from "../../core_game/game/GameState";
 import { useGameScreenContext } from "../views/GameScreenContext";
 import classes from "./Card.module.css"
 
@@ -29,12 +30,29 @@ export const Card: FC<CardProps> = observer(({card, style}) => {
 		return card.isPlayable
 	}, [gameState.isClientOwnerTurn, card.isPlayable])
 
+	const gameStateCurrentActionPossibleTargets = (() => {
+		if (gameState.currentAction.type === GameCurrentActionType.ChooseTarget) {
+			return gameState.currentAction.possibleTargets
+		}
+		return []		
+	})()
+
 	const isATargetCard = useMemo(() => {
 		if (selectedCard === null) {
-			return
+			return false
 		}
-		return gameState.cards[selectedCard].targets.includes(card.id)
-	}, [gameState.cards, selectedCard, card.id])
+		if (gameState.cards[selectedCard].targets.includes(card.id)) {
+			return true
+		}
+		
+		if (gameState.currentAction.type === GameCurrentActionType.ChooseTarget) {
+			if (gameStateCurrentActionPossibleTargets.includes(card.id)) {
+				return true
+			}
+		}
+
+		return false
+	}, [gameState.cards, selectedCard, card.id, gameState.currentAction, gameStateCurrentActionPossibleTargets])
 
 	const clickOnCard = () => {
 		if (card.position.position === "hand") {
@@ -42,7 +60,7 @@ export const Card: FC<CardProps> = observer(({card, style}) => {
 				return
 			}
 			setSelectedCard(card.id)
-		} else if (card.position.position === "board" && card.type === "base") {
+		} else if (card.position.position === "board" && card.type === CardType.Base) {
 			if (selectedCard) {
 				gameServer.sendGameMessage({
 					type: "play_card",
@@ -55,7 +73,13 @@ export const Card: FC<CardProps> = observer(({card, style}) => {
 				})
 				setSelectedCard(null)
 			}
-		}		
+		} else if (gameState.currentAction.type === GameCurrentActionType.ChooseTarget) {
+			gameServer.sendGameMessage({
+				type: "pick_target",
+				cardId: card.id,
+				playerID: gameServer.playerID,
+			})
+		}
 	}
 
 	let className = classes.card 

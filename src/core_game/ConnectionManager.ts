@@ -1,4 +1,4 @@
-import { makeAutoObservable } from "mobx";
+import { makeAutoObservable, runInAction } from "mobx";
 import Peer from "peerjs";
 import { GameServer } from "./GameServer";
 
@@ -17,7 +17,7 @@ export class ConnectionManager {
 		this.isMaster = true
 		this.peer = new Peer()
 		this.peer.on("open", id => {
-			this.peerID = id
+			runInAction(() => this.peerID = id)
 		})
 		this.peer.on("connection", dataConnection => {
 			this.isMaster = false

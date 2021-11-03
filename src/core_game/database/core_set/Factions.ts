@@ -1,4 +1,4 @@
-export enum Factions {
+export enum Faction {
 	Aliens = "Aliens",
 	Dinosaurs = "Dinosaurs",
 	Ninjas = "Ninjas",

@@ -1,10 +1,11 @@
 import { makeAutoObservable } from "mobx";
 import { ConnectionManager } from "./ConnectionManager";
-import { GameState } from "./game/GameState";
+import { GameCurrentActionType, GameState } from "./game/GameState";
 import { GameMessage } from "./game_messages/GameMessage";
 import { isEndTurnMessage } from "./game_messages/EndTurnMessage";
 import { isPlayCardMessage } from "./game_messages/PlayCardMessage";
 import { isUpdateGameStateMessage, UpdateGameStateMessage } from "./game_messages/UpdateGameStateMessage";
+import { isPickTargetMessage } from "./game_messages/PickTargetMessage";
 
 export class GameServer {
 	connectionManager: ConnectionManager
@@ -38,7 +39,7 @@ export class GameServer {
 
 		if (isEndTurnMessage(message)) {
 			if (this.gameState.turnPlayerId !== message.playerID) {
-				return
+				throw new Error("Error, the turn player is different")
 			}
 			this.gameState.endTurn()
 			this.sendUpdateGameState()
@@ -47,12 +48,23 @@ export class GameServer {
 
 		if (isPlayCardMessage(message)) {
 			if (this.gameState.turnPlayerId !== message.playerID) {
-				return
+				throw new Error("Error, the turn player is different")
 			}
 			this.gameState.playCard(message.card_id, message.playerID, message.position)
 			this.sendUpdateGameState()
 			return
 		}
+
+		if (isPickTargetMessage(message)) {
+			const currentAction = this.gameState.currentAction
+			if (!currentAction || currentAction.type !== GameCurrentActionType.ChooseTarget) {
+				throw new Error("The current action isn't 'ChooseTarget'")
+			}
+			currentAction.sendTargetCallback(message.cardId)
+			return	
+		}
+
+		throw new Error("Attenzione, tipo di messaggio non riconosciuto")
 	}
 
 	sendUpdateGameState() {
