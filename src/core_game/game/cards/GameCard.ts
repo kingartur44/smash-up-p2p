@@ -69,6 +69,7 @@ export abstract class GameCard {
 	onPlay() {
 		this.queryEffects("on-play")
 			.forEach(effect => {
+				// eslint-disable-next-line no-eval
 				const callback = eval(transpile(effect.callback))
 				callback(this, this.gameState)
 			})

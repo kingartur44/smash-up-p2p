@@ -12,6 +12,8 @@ export interface MinionDatabaseCardPrototype {
 
 	name: string
 	description: string
+	image?: string
+
 	initializeEffects?: (card: GameCard, gameState: GameState) => void
 
 	power: number
@@ -23,6 +25,8 @@ export interface ActionDatabaseCardPrototype {
 
 	name: string
 	description: string
+	image?: string
+	
 	initializeEffects?: (card: GameCard, gameState: GameState) => void
 
 }
@@ -32,6 +36,8 @@ export interface BaseDatabaseCardPrototype {
 
 	name: string
 	description: string
+	image?: string
+	
 	initializeEffects?: (card: GameCard, gameState: GameState) => void
 
 	breakpoint: number
@@ -60,6 +66,7 @@ export function generateSet(faction: Faction, prototypes: DatabaseCardPrototypes
 					return new MinionDatabaseCard({
 						id: card_id,
 						description: prototype.description,
+						image: prototype.image,
 						faction: faction,
 						name: prototype.name,
 						power: prototype.power,
@@ -70,6 +77,7 @@ export function generateSet(faction: Faction, prototypes: DatabaseCardPrototypes
 					return new ActionDatabaseCard({
 						id: card_id,
 						description: prototype.description,
+						image: prototype.image,
 						faction: faction,
 						name: prototype.name,
 						initializeEffects: prototype.initializeEffects
@@ -79,6 +87,7 @@ export function generateSet(faction: Faction, prototypes: DatabaseCardPrototypes
 					return new BaseDatabaseCard({
 						id: card_id,
 						description: prototype.description,
+						image: prototype.image,
 						faction: faction,
 						name: prototype.name,
 						initializeEffects: prototype.initializeEffects,

@@ -81,15 +81,7 @@ export class GameState {
 			}),
 		]
 		this.turnPlayerId = 0
-		this.bases = [
-			this.generateCard(Bases[0]).id,
-			this.generateCard(Bases[1]).id,
-		]
-		for (const cardID of this.bases) {
-			this.cards[cardID].position = {
-				position: "board"
-			}
-		}
+		this.bases = []
 
 		this.haveToInitPhase = true
 		this.phase = GamePhase.FactionSelect
@@ -103,6 +95,17 @@ export class GameState {
 		makeAutoObservable(this, {
 			server: false
 		})
+
+		// Temp Init
+		this.moveCard(this.generateCard(Bases[0]).id, {
+			position: "board"
+		})
+		this.moveCard(this.generateCard(Bases[1]).id, {
+			position: "board"
+		})
+		this.moveCard(this.generateCard(Bases[2]).id, {
+			position: "board"
+		})
 	}
 
 	nextStep() {
@@ -110,6 +113,7 @@ export class GameState {
 			let nextEffect = this.activatedEffectQueue.pop()
 			if (nextEffect) {
 				const card = this.getCard(nextEffect.card_id)
+				// eslint-disable-next-line no-eval
 				const callback = eval(transpile(nextEffect.effect, {
 					target: ScriptTarget.ESNext
 				}))
@@ -226,7 +230,7 @@ export class GameState {
 		}
 	}
 
-	getCard(card_id: number): GameCard | null {
+	getCard(card_id: GameCardId): GameCard | null {
 		return this.cards[card_id]
 	}
 
@@ -304,6 +308,10 @@ export class GameState {
 				this.players[position.playerID].hand = this.players[position.playerID].hand.filter(cardID => cardID !== gameCard.id)
 				break
 			}
+			case "deck": {
+				this.players[position.playerID].deck = this.players[position.playerID].deck.filter(cardID => cardID !== gameCard.id)
+				break
+			}
 			case "base": {
 				const base = this.getCard(position.base_id) as BaseGameCard
 				if (!base) {
@@ -313,8 +321,11 @@ export class GameState {
 				base.attached_cards = base.attached_cards.filter(cardID => cardID !== gameCard.id)
 				break
 			}
+			case "no-position": {
+				break
+			}
 			default: {
-				throw new Error("Non Implementato")
+				throw new Error(`Position [${position.position}] not implemented`)
 			}
 		}
 		gameCard.position = {
@@ -325,6 +336,7 @@ export class GameState {
 	moveCard(cardID: number, newPosition: Position) {
 		this.removeCardFromItsPosition(cardID)
 		const card = this.getCard(cardID)
+
 		if (!card) {
 			throw new Error(`The card [${cardID}] does not exist`)
 		}
@@ -337,7 +349,10 @@ export class GameState {
 				}
 
 				base.attached_cards.push(cardID)
-				card.position = newPosition
+				card.position = {
+					...newPosition,
+					index: base.attached_cards.length - 1
+				}
 				break
 			}
 			case "hand": {
@@ -347,8 +362,34 @@ export class GameState {
 				}
 
 				player.hand.push(cardID)
-				card.position = newPosition
+				card.position = {
+					...newPosition,
+					index: player.hand.length - 1
+				}
 				break
+			}
+			case "deck": {
+				const player = this.players[newPosition.playerID]
+				if (!player) {
+					throw new Error(`The player [${newPosition.playerID}] does not exist`)
+				}
+
+				player.deck.push(cardID)
+				card.position = {
+					...newPosition,
+					index: player.deck.length - 1
+				}
+				break
+			}
+			case "board": {
+				if (!card.isBaseCard()) {
+					throw new Error("Trying to move a non-base card on the board")
+				}
+				this.bases.push(cardID)
+				card.position = {
+					...newPosition,
+					index: this.bases.length - 1
+				}
 			}
 		}
 	}

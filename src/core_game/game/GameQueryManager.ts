@@ -46,7 +46,7 @@ export class GameQueryManager {
 								case "<=":
 									return card.power <= checkValue
 								case "=":
-									return card.power == checkValue
+									return card.power === checkValue
 								case ">":
 									return card.power > checkValue
 								case ">=":

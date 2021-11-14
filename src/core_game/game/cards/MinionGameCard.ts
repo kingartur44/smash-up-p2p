@@ -44,22 +44,23 @@ export class MinionGameCard extends GameCard {
 		});
 	}
 
-	override get databaseCard(): MinionDatabaseCard {
+	get databaseCard(): MinionDatabaseCard {
 		return Cards[this.database_card_id] as MinionDatabaseCard;
 	}
 
 	
-	override get power() {
+	get power() {
 		let cardPower = this.databaseCard.power
 		this.queryEffects("power-boost")
 			.forEach(effect => {
+				// eslint-disable-next-line no-eval
 				const callback = eval(transpile(effect.callback))
 				cardPower += callback(this, this.gameState)
 			})
 		return cardPower
 	}
 
-	override get targets(): number[] {
+	get targets(): number[] {
 		let targets = [];
 		for (const card of Object.values(this.gameState.cards)) {
 			if (card.isBaseCard()) {
@@ -70,7 +71,7 @@ export class MinionGameCard extends GameCard {
 	}
 
 
-	override get isPlayable(): boolean {
+	get isPlayable(): boolean {
 		if (this.position.position === "hand") {
 			if (this.targets.length > 0) {
 				if (this.position.playerID === this.gameState.turnPlayerId) {

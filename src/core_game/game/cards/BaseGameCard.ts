@@ -51,23 +51,23 @@ export class BaseGameCard extends GameCard {
 		});
 	}
 
-	override get databaseCard(): BaseDatabaseCard {
+	get databaseCard(): BaseDatabaseCard {
 		return Cards[this.database_card_id] as BaseDatabaseCard;
 	}
 
 
 
-	override get power(): number {
+	get power(): number {
 		return 0;
 	}
 
 
-	override get targets(): number[] {
+	get targets(): number[] {
 		return [];
 	}
 
 
-	override get isPlayable(): boolean {
+	get isPlayable(): boolean {
 		return false;
 	}
 

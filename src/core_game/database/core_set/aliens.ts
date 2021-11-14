@@ -2,7 +2,8 @@ import { CardType } from "../../data/CardType"
 import { generateSet } from "../utils"
 import { Faction } from "./Factions"
 
- 
+import collector_image from "../../../assets/aliens/collector.png"
+import scout_image from "../../../assets/aliens/scout.png"
 
 const Set = generateSet(Faction.Aliens, [
 	{
@@ -54,6 +55,8 @@ const Set = generateSet(Faction.Aliens, [
 
 		name: "Scout",
 		description: "Special: After this base is scored, you may place this minion into your hand instead of the discard pile.",
+		image: scout_image,
+
 		power: 3
 	},
 
@@ -63,6 +66,8 @@ const Set = generateSet(Faction.Aliens, [
 
 		name: "Collector",
 		description: "You may return a non-Collector minion of power 3 or less on this base to its owner’s hand.",
+		image: collector_image,
+
 		power: 2,
 		initializeEffects: async (card, gameState) => {
 			card.registerEffect({

@@ -14,11 +14,13 @@ interface GameScreenProps {
 export const GameScreen: FC<GameScreenProps> = observer(({ gameServer }) => {
 
 	const [selectedCard, setSelectedCard] = useState(null as number | null)
+	const [hoveredCard, setHoveredCard] = useState(null as number | null)
 
 	return <GameScreenContext.Provider value={{
 		gameServer: gameServer,
 		gameState: gameServer.gameState,
-		selectedCard, setSelectedCard
+		selectedCard, setSelectedCard,
+		hoveredCard, setHoveredCard
 	}}>
 		<div style={{
 			background: "black",

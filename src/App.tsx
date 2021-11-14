@@ -1,12 +1,17 @@
-import React, { FC, useEffect, useState } from 'react';
+import { FC, useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { GameServer } from './core_game/GameServer';
-import { GameScreen } from './react/views/GameScreen';
+import { ThreeJSContainer } from './threejs/ThreeJSContainer';
+import { GameCardId } from './core_game/game/GameState';
+import { GameScreenContext } from './react/views/GameScreenContext';
 
 
 export const App = observer(() => {
 
 	const [gameServer] = useState(new GameServer())
+
+	const [selectedCard, setSelectedCard] = useState(null as GameCardId | null)
+	const [hoveredCard, setHoveredCard] = useState(null as GameCardId | null)
 
 	useEffect(() => {
 		const intervalID = setInterval(() => {
@@ -27,8 +32,16 @@ export const App = observer(() => {
 			<ConnectComponent gameServer={gameServer} />
 		</div>
 	}
+	
 
-	return <GameScreen gameServer={gameServer} />
+	return <GameScreenContext.Provider value={{
+		gameServer: gameServer,
+		gameState: gameServer.gameState,
+		selectedCard, setSelectedCard,
+		hoveredCard, setHoveredCard
+	}}>
+		<ThreeJSContainer />
+	</GameScreenContext.Provider>
 })
 
 interface ConnectComponentProps {

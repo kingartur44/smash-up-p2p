@@ -8,6 +8,9 @@ interface GameScreenContextInterface {
 
 	selectedCard: number | null
 	setSelectedCard: React.Dispatch<React.SetStateAction<number | null>>
+
+	hoveredCard: number | null
+	setHoveredCard: React.Dispatch<React.SetStateAction<number | null>>
 }
 
 export const GameScreenContext = React.createContext(undefined as unknown as GameScreenContextInterface)

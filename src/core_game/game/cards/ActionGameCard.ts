@@ -41,17 +41,17 @@ export class ActionGameCard extends GameCard {
 		});
 	}
 
-	override get databaseCard(): ActionDatabaseCard {
+	get databaseCard(): ActionDatabaseCard {
 		return Cards[this.database_card_id] as ActionDatabaseCard;
 	}
 
-	override get power() {
+	get power() {
 		return 0;
 	}
 
 	
 
-	override get targets(): number[] {
+	get targets(): number[] {
 		let targets = [];
 		for (const card of Object.values(this.gameState.cards)) {
 			if (card.isBaseCard() || card.isMinionCard()) {
@@ -62,7 +62,7 @@ export class ActionGameCard extends GameCard {
 	}
 
 
-	override get isPlayable(): boolean {
+	get isPlayable(): boolean {
 		if (this.position.position === "hand") {
 			if (this.targets.length > 0) {
 				if (this.position.playerID === this.gameState.turnPlayerId) {

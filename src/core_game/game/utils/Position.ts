@@ -16,6 +16,7 @@ export function isNoPosition(data: any): data is NoPosition {
 interface HandPosition {
 	position: "hand"
 	playerID: PlayerID
+	index?: number
 }
 export function isHandPosition(data: any): data is HandPosition {
 	return data.postion === "hand" &&
@@ -34,6 +35,7 @@ export function isDiscardPilePosition(data: any): data is DiscardPilePosition {
 export interface DeckPosition {
 	position: "deck"
 	playerID: PlayerID
+	index?: number
 }
 export function isDeckPosition(data: any): data is DeckPosition {
 	return data.postion === "deck" &&
@@ -43,13 +45,15 @@ export function isDeckPosition(data: any): data is DeckPosition {
 export interface BasePosition {
 	position: "base"
 	base_id: number
+	index?: number
 }
 export function isBasePosition(data: any): data is BasePosition {
 	return data.position === "base" && typeof data.base_id === "number"
 }
 
-interface BoardPosition {
-	position: "board"
+export interface BoardPosition {
+	position: "board",
+	index?: number
 }
 export function isBoardPosition(data: any): data is BoardPosition {
 	return data.position === "board"

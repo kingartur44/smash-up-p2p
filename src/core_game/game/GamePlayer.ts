@@ -52,10 +52,10 @@ export class GamePlayer {
 					const card = this.gameState.generateCard(databaseCard)
 					card.owner_id = this.id;
 					card.controller_id = this.id;
-					card.position = {
+					this.gameState.moveCard(card.id, {
 						position: "deck",
 						playerID: this.id
-					}
+					})
 					return card.id
 				}))
 			}
@@ -64,14 +64,15 @@ export class GamePlayer {
 					const card = this.gameState.generateCard(databaseCard)
 					card.owner_id = this.id;
 					card.controller_id = this.id;
-					card.position = {
+					this.gameState.moveCard(card.id, {
 						position: "deck",
 						playerID: this.id
-					}
+					})
 					return card.id
 				}))
 			}
 		}
+		console.warn("LE POSIZIONI")
 		shuffleArray(this.deck)
 	}
 
@@ -81,11 +82,10 @@ export class GamePlayer {
 			if (!cardId) {
 				break
 			}
-			this.gameState.cards[cardId].position = {
+			this.gameState.moveCard(cardId, {
 				position: "hand",
 				playerID: this.id
-			}
-			this.hand.push(cardId)
+			})
 		}
 	}
 

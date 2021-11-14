@@ -7,6 +7,7 @@ export interface DatabaseCard {
 	id: string
 	name: string
 	description: string
+	image?: string
 	faction: string
 	initializeEffects?: (card: GameCard, gameState: GameState) => void
 }
@@ -17,17 +18,19 @@ export class MinionDatabaseCard implements DatabaseCard {
 	id: string
 	name: string
 	description: string
+	image?: string
 	faction: string
 
 	initializeEffects?: (card: GameCard, gameState: GameState) => void
 
 	power: number
 	
-	constructor({id, name, description, faction, power, initializeEffects}: {id: string, name: string, description: string, faction: string, initializeEffects?: (card: GameCard, gameState: GameState) => void} & {power: number}) {
+	constructor({id, name, description, image, faction, power, initializeEffects}: {id: string, name: string, description: string, image?: string, faction: string, initializeEffects?: (card: GameCard, gameState: GameState) => void} & {power: number}) {
 		this.type = CardType.Minion
 		this.id = id
 		this.name = name
 		this.description = description
+		this.image = image
 		this.faction = faction
 		this.power = power
 		this.initializeEffects = initializeEffects
@@ -39,16 +42,19 @@ export class ActionDatabaseCard implements DatabaseCard {
 	id: string
 	name: string
 	description: string
+	image?: string
+
 	faction: string
 
 	initializeEffects?: (card: GameCard, gameState: GameState) => void
 
 	
-	constructor({id, name, description, faction, initializeEffects}: {id: string, name: string, description: string, faction: string, initializeEffects?: (card: GameCard, gameState: GameState) => void}) {
+	constructor({id, name, description, image, faction, initializeEffects}: {id: string, name: string, description: string, image?: string, faction: string, initializeEffects?: (card: GameCard, gameState: GameState) => void}) {
 		this.type = CardType.Action
 		this.id = id
 		this.name = name
 		this.description = description
+		this.image = image
 		this.faction = faction
 		this.initializeEffects = initializeEffects
 	}
@@ -59,6 +65,8 @@ export class BaseDatabaseCard implements DatabaseCard {
 	id: string
 	name: string
 	description: string
+	image?: string
+
 	faction: string
 
 	initializeEffects?: (card: GameCard, gameState: GameState) => void
@@ -66,12 +74,13 @@ export class BaseDatabaseCard implements DatabaseCard {
 	breakpoint: number
 	points: number[]
 	
-	constructor({id, name, description, faction, breakpoint, points, initializeEffects}: {id: string, name: string, description: string, faction: string, initializeEffects?: (card: GameCard, gameState: GameState) => void} & { breakpoint: number, points: number[] }) {
+	constructor({id, name, description, image, faction, breakpoint, points, initializeEffects}: {id: string, name: string, description: string, image?: string, faction: string, initializeEffects?: (card: GameCard, gameState: GameState) => void} & { breakpoint: number, points: number[] }) {
 		this.type = CardType.Base
 
 		this.id = id
 		this.name = name
 		this.description = description
+		this.image = image
 		this.faction = faction
 
 		this.breakpoint = breakpoint
