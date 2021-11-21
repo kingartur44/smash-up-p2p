@@ -1,0 +1,15 @@
+.prompt_screen {
+	background: white;
+	color: black;
+	
+	position: fixed;
+	z-index: 1;
+	top: 5px;
+	left: 50%;
+	width: 50%;
+	transform: translateX(-50%);
+
+	padding: 10px;
+	font-size: x-large;
+	border: 1px solid white;
+}

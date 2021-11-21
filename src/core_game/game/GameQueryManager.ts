@@ -19,6 +19,7 @@ export interface GameQuery {
 			value: number
 		}
 	}
+
 }
 
 export class GameQueryManager {

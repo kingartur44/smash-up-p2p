@@ -19,7 +19,7 @@ export const EndTurnButton: FC = observer(() => {
 			return false
 		}
 
-		if (gameState.phase !== GamePhase.GameTurn_Play) {
+		if (gameState.phase !== GamePhase.GameTurn_PlayCards) {
 			return false
 		}
 

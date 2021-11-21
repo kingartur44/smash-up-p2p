@@ -9,6 +9,7 @@ import { Card3DModel } from './Card3DModel'
 import { useCards } from './useCards'
 import { EndTurnButton } from './EndTurnButton'
 import { LeftBar } from './LeftBar'
+import { MessagesOverlay } from './MessagesOverlay'
 
 
 interface ThreeJSContainerProps {
@@ -20,6 +21,7 @@ export const ThreeJSContainer: FC<ThreeJSContainerProps> = observer(() => {
 	return <div>
 		<div style={{display: "flex"}}>
 			<LeftBar />
+			<MessagesOverlay />
 			<Suspense fallback={"Loading..."}>
 				<ThreeFiberScene />
 			</Suspense>
@@ -41,11 +43,11 @@ export const ThreeFiberScene = observer(() => {
 	const ContextBridge = useContextBridge(GameScreenContext)
 
 	return <div style={{
-		width: 800,
+		width: "100%",
 		height: 720
 	}}> 
 		<Canvas>
-			<color attach="background" args={["#dadada"]} />
+			<color attach="background" args={["cyan"]} />
 			{/* <MapControls camera={currentCamera.current} /> */}
 
 			<ContextBridge>

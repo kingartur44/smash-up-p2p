@@ -24,7 +24,7 @@ export const Cards: Record<string, DatabaseCard> = {
 	"base-03": new BaseDatabaseCard({
 		id: "base-03",
 		name: "Jungle Oasis",
-		description: "",
+		description: "(No effect)",
 		faction: Faction.Dinosaurs,
 		breakpoint: 12,
 		points: [2, 0, 0]

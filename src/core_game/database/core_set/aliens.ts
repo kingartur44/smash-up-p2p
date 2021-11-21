@@ -5,6 +5,18 @@ import { Faction } from "./Factions"
 import collector_image from "../../../assets/aliens/collector.png"
 import scout_image from "../../../assets/aliens/scout.png"
 
+import abduction_image from "../../../assets/aliens/abduction.png"
+import beam_up_image from "../../../assets/aliens/beam up.png"
+import crop_circles_image from "../../../assets/aliens/crop circles.png"
+import disintegrator_image from "../../../assets/aliens/disintegrator.png"
+import invader_image from "../../../assets/aliens/invader.png"
+import invasion_image from "../../../assets/aliens/invasion.png"
+import probe_image from "../../../assets/aliens/probe.png"
+import jammed_signal_image from "../../../assets/aliens/jammed signal.png"
+import supreme_overlord_image from "../../../assets/aliens/supreme overlord.png"
+import terraforming_image from "../../../assets/aliens/terraforming.png"
+
+
 const Set = generateSet(Faction.Aliens, [
 	{
 		type: CardType.Minion,
@@ -12,6 +24,8 @@ const Set = generateSet(Faction.Aliens, [
 
 		name: "Supreme Overlord",
 		description: "You may return a minion to its owner’s hand.",
+		image: supreme_overlord_image,
+
 		power: 5,
 		initializeEffects: async (card, gameState) => {
 			card.registerEffect({
@@ -36,6 +50,8 @@ const Set = generateSet(Faction.Aliens, [
 
 		name: "Invader",
 		description: "Gain 1 VP.",
+		image: invader_image,
+
 		power: 3,
 		initializeEffects: (card, gameState) => {
 			card.registerEffect({
@@ -102,7 +118,33 @@ const Set = generateSet(Faction.Aliens, [
 		quantityInDeck: 1,
 
 		name: "Abduction",
-		description: "Return a minion to its owner’s hand. Play an extra minion."
+		description: "Return a minion to its owner’s hand. Play an extra minion.",
+		image: abduction_image,
+
+		initializeEffects: async (card, gameState) => {
+			card.playTargetQuery = {
+				cardType: [CardType.Minion],
+				filters: {
+					position: ["on-the-board"]
+				}
+			}
+			
+			card.registerEffect({
+				type: "on-play",
+				callback: `async (card, gameState) => {
+					const target = await gameState.pickTarget(
+						card.playTargetQuery,
+						"Scegli un minion da far tornare in mano",
+						true
+					)
+					target?.returnToOwnerHand()
+					
+					if (card.controller) {
+						card.controller.minionPlays += 1
+					}
+				}`
+			})
+		}
 	},
 
 	{
@@ -110,7 +152,29 @@ const Set = generateSet(Faction.Aliens, [
 		quantityInDeck: 2,
 
 		name: "Beam Up",
-		description: "Return a minion to its owner’s hand."
+		description: "Return a minion to its owner’s hand.",
+		image: beam_up_image,
+
+		initializeEffects: async (card, gameState) => {
+			card.playTargetQuery = {
+				cardType: [CardType.Minion],
+				filters: {
+					position: ["on-the-board"]
+				}
+			}
+			
+			card.registerEffect({
+				type: "on-play",
+				callback: `async (card, gameState) => {
+					const target = await gameState.pickTarget(
+						card.playTargetQuery,
+						"Scegli un minion da far tornare in mano",
+						true
+					)
+					target?.returnToOwnerHand()
+				}`
+			})
+		}
 	},
 
 	{
@@ -118,7 +182,35 @@ const Set = generateSet(Faction.Aliens, [
 		quantityInDeck: 1,
 
 		name: "Crop Circles",
-		description: "Choose a base. Return each minion on that base to its owner’s hand."
+		description: "Choose a base. Return each minion on that base to its owner’s hand.",
+		image: crop_circles_image,
+
+		initializeEffects: async (card, gameState) => {
+			card.playTargetQuery = {
+				cardType: [CardType.Base],
+				filters: {
+					position: ["on-the-board"]
+				}
+			}
+
+			card.registerEffect({
+				type: "on-play",
+				callback: `async (card, gameState) => {
+					const target = await gameState.pickTarget(
+						card.playTargetQuery,
+						"Scegli una base. Tutti i minion su quella base torneranno in mano ai rispettivi proprietari",
+						true
+					)
+					if (!target || !target.isBaseCard()) {
+						throw new Error("The selected card isn't a base")
+					}
+					
+					target.attached_cards.forEach(card_id => {
+						gameState.getCard(card_id)?.returnToOwnerHand()
+					})
+				}`
+			})
+		}
 	},
 
 	{
@@ -126,7 +218,8 @@ const Set = generateSet(Faction.Aliens, [
 		quantityInDeck: 2,
 
 		name: "Disintegrator",
-		description: "Return a minion to its owner’s hand."
+		description: "Return a minion to its owner’s hand.",
+		image: disintegrator_image
 	},
 
 	{
@@ -134,7 +227,8 @@ const Set = generateSet(Faction.Aliens, [
 		quantityInDeck: 1,
 
 		name: "Invasion",
-		description: "Move a minion to another base."
+		description: "Move a minion to another base.",
+		image: invasion_image
 	},
 
 	{
@@ -142,7 +236,8 @@ const Set = generateSet(Faction.Aliens, [
 		quantityInDeck: 1,
 
 		name: "Jammed Signal",
-		description: "Play on a base. Ongoing: All players ignore this base’s ability."
+		description: "Play on a base. Ongoing: All players ignore this base’s ability.",
+		image: jammed_signal_image
 	},
 
 	{
@@ -150,7 +245,8 @@ const Set = generateSet(Faction.Aliens, [
 		quantityInDeck: 1,
 
 		name: "Probe",
-		description: "Look at another player’s hand and choose a minion in it. That player discards that minion."
+		description: "Look at another player’s hand and choose a minion in it. That player discards that minion.",
+		image: probe_image
 	},
 
 	{
@@ -158,7 +254,8 @@ const Set = generateSet(Faction.Aliens, [
 		quantityInDeck: 1,
 
 		name: "Terraforming",
-		description: "Search the base deck for a base. Swap it with a base in play (discard all actions attached to it). All minions from the original base remain. Shuffle the base deck. You may play an extra minion on the new base."
+		description: "Search the base deck for a base. Swap it with a base in play (discard all actions attached to it). All minions from the original base remain. Shuffle the base deck. You may play an extra minion on the new base.",
+		image: terraforming_image
 	},
 ])
 

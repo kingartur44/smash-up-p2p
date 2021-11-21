@@ -87,7 +87,7 @@ const BoardScreen: FC<BoardScreenProps> = observer(({style}) => {
 	const { gameServer, gameState } = useGameScreenContext()
 
 	return <div style={style}>
-		{gameServer.gameState.bases.map(baseCardId => {
+		{gameServer.gameState.in_play_bases.map(baseCardId => {
 			const baseCard = gameState.cards[baseCardId] as BaseGameCard
 			return <div>
 				<Card key={baseCardId} card={baseCard} />

@@ -11,14 +11,13 @@ import { BaseGameCard } from "./BaseGameCard";
 export class MinionGameCard extends GameCard {
 	
 	type: CardType.Minion;
-	database_card_id: string;
+
 
 	constructor(gameState: GameState) {
 		super(gameState) 
 
 		this.gameState = gameState;
 		this.type = CardType.Minion;
-		this.database_card_id = "";
 
 		makeObservable(this, {
 			id: observable,
@@ -76,7 +75,7 @@ export class MinionGameCard extends GameCard {
 			if (this.targets.length > 0) {
 				if (this.position.playerID === this.gameState.turnPlayerId) {
 					if (this.gameState.turnPlayer.minionPlays > 0) {
-						if (this.gameState.phase === GamePhase.GameTurn_Play) {
+						if (this.gameState.phase === GamePhase.GameTurn_PlayCards) {
 							if (this.gameState.currentAction.type === GameCurrentActionType.None) {
 								return true;
 							}

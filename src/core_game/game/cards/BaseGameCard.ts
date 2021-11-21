@@ -1,7 +1,7 @@
 import { BaseDatabaseCard } from "../../database/DatabaseCard";
 import { Cards } from "../../database/core_set/core_set";
 import { action, computed, makeObservable, observable } from "mobx";
-import { GameState, PlayerID } from "../GameState";
+import { GameCardId, GameState, PlayerID } from "../GameState";
 import { GameCard } from "./GameCard";
 import { GamePlayer } from "../GamePlayer";
 import { CardType } from "../../data/CardType";
@@ -11,7 +11,7 @@ export class BaseGameCard extends GameCard {
 
 	type: CardType.Base;
 
-	database_card_id: string;
+	
 	attached_cards: number[];
 
 	constructor(gameState: GameState) {
@@ -19,7 +19,7 @@ export class BaseGameCard extends GameCard {
 
 		this.type = CardType.Base;
 
-		this.database_card_id = "";
+		
 		this.attached_cards = [];
 
 		makeObservable(this, {
@@ -84,16 +84,41 @@ export class BaseGameCard extends GameCard {
 		return power;
 	}
 
+	get playerCards(): Record<PlayerID, GameCardId[]> {
+		const cards: Record<PlayerID, GameCardId[]> = {}
+
+		for (const card_id of this.attached_cards) {
+			const card = this.gameState.getCard(card_id);
+			if (card === null) {
+				throw new Error(`Warning, card [${card_id}] does not exist`)
+			}
+			const cardController = card.controller_id
+			if (cardController === null) {
+				continue
+			}
+			
+			if (!cards[cardController]) {
+				cards[cardController] = []
+			}
+			cards[cardController].push(card_id)
+		}
+
+		return cards
+	}
+
 	get playerBasedPowerOnBase(): Record<PlayerID, number> {
 		const powerMap: Record<PlayerID, number> = {}
 
 		for (const card_id of this.attached_cards) {
 			const card = this.gameState.getCard(card_id);
-			const cardController = card?.controller_id
-			if (cardController === undefined || cardController === null) {
+			if (card === null) {
+				throw new Error(`Warning, card [${card_id}] does not exist`)
+			}
+			const cardController = card.controller_id
+			if (cardController === null) {
 				continue
 			}
-			powerMap[cardController] = (powerMap[cardController] ?? 0) + (card?.power ?? 0)
+			powerMap[cardController] = (powerMap[cardController] ?? 0) + card.power
 		}
 
 		return powerMap

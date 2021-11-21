@@ -1,24 +1,18 @@
 import { FC, useMemo, useState } from 'react';
 import { useLoader, Vector3 } from '@react-three/fiber';
 import { Text } from '@react-three/drei';
-import card_back from "../assets/standard_card_back.png";
-import { DoubleSide, Euler, TextureLoader } from 'three';
+import { DoubleSide, Euler, Shape, TextureLoader } from 'three';
 import { GameCard } from '../core_game/game/cards/GameCard';
 import { observer } from 'mobx-react-lite';
 import { useGameScreenContext } from '../react/views/GameScreenContext';
-import { CardType } from '../core_game/data/CardType';
 import { GameCurrentActionType } from '../core_game/game/GameState';
 import { useSpring, animated } from '@react-spring/three'
 import { usePositions } from './usePositions';
+import { drawRectFromCenter } from './Table';
 
-export interface Card3DModelProps {
-	position?: Vector3;
-	rotation?: Euler;
-	isFlipped?: boolean;
+import standard_card_back from "../assets/standard_card_back.png";
+import base_card_back from "../assets/base_card_back.png"
 
-	card: GameCard;
-	key: any
-}
 
 function useGameCard(card: GameCard) {
 	const {
@@ -66,7 +60,7 @@ function useGameCard(card: GameCard) {
 				return
 			}
 			setSelectedCard(card.id)
-		} else if (card.position.position === "board" && card.type === CardType.Base) {
+		} else if (isATargetCard) {
 			if (selectedCard) {
 				gameServer.sendGameMessage({
 					type: "play_card",
@@ -92,6 +86,14 @@ function useGameCard(card: GameCard) {
 	}
 }
 
+export interface Card3DModelProps {
+	position?: Vector3;
+	rotation?: Euler;
+	isFlipped?: boolean;
+
+	card: GameCard;
+	key: any
+}
 export const Card3DModel: FC<Card3DModelProps> = observer(({ position: propsPosition, rotation: propsRotation, isFlipped, card }) => {
 
 	const {
@@ -104,7 +106,9 @@ export const Card3DModel: FC<Card3DModelProps> = observer(({ position: propsPosi
 	// Immagine Carta
 	const imageName = card.databaseCard.image
 	const hasCustomImage = imageName !== undefined;
-	const textureName = (hasCustomImage && !isFlipped) ? imageName : card_back
+	const textureName = (hasCustomImage && !isFlipped) ? imageName : (
+		card.isBaseCard() ? base_card_back : standard_card_back
+	)
 	const texture = useLoader(TextureLoader, textureName);
 
 	// Gestione colore
@@ -115,7 +119,7 @@ export const Card3DModel: FC<Card3DModelProps> = observer(({ position: propsPosi
 	const effectiveRotation = useMemo(() => {
 		let pRotation = propsRotation || new Euler();
 		return pRotation;
-	}, [isFlipped, propsRotation]);
+	}, [ propsRotation ]);
 
 	// Animazioni
 	const { position, rotation } = useSpring({
@@ -123,15 +127,27 @@ export const Card3DModel: FC<Card3DModelProps> = observer(({ position: propsPosi
 		rotation: effectiveRotation
 	})
 
+	const cardSize = useMemo(() => {
+		if (card.isBaseCard()) {
+			return {
+				width: CARD_HEIGHT,
+				height: CARD_WIDTH
+			}
+		}
+		return {
+			width: CARD_WIDTH,
+			height: CARD_HEIGHT
+		}
+	}, [card.isBaseCard])
 	
-	const cardColor = (() => {
+	const cardOutlineColor = (() => {
 		if (isPlayable || isSelected) {
 			return "yellow"
 		}
 		if (isATargetCard) {
 			return "red"
 		}
-		return "white"
+		return undefined
 	})()
 
 
@@ -154,6 +170,13 @@ export const Card3DModel: FC<Card3DModelProps> = observer(({ position: propsPosi
 		</Text>
 	})()
 
+
+	const outlineShape = useMemo(() => {
+		const shape = new Shape()
+		drawRectFromCenter({shape, centerX: 0, centerY: 0, width: cardSize.width, height: cardSize.height})
+		return shape
+	}, [CARD_WIDTH, CARD_HEIGHT])
+
 	return <animated.group position={position as any} rotation={rotation} scale={isHovered ? 1.05 : 1}>
 		<mesh onPointerOver={event => {
 				event.stopPropagation()
@@ -166,21 +189,18 @@ export const Card3DModel: FC<Card3DModelProps> = observer(({ position: propsPosi
 			}}
 			onClick={onCardAction}
 		>
-			<planeBufferGeometry attach="geometry" args={[CARD_WIDTH, CARD_HEIGHT]} />
+			<planeBufferGeometry attach="geometry" args={[cardSize.width, cardSize.height]} />
 			<meshBasicMaterial attach="material"
 				map={texture}
 				side={DoubleSide}
-				opacity={1}
-				color={cardColor}
 			/>
 		</mesh>
 
-		{powerIndicator}
+		{cardOutlineColor && <line>
+			<shapeBufferGeometry args={[outlineShape]} />
+			<lineBasicMaterial linewidth={8} color={cardOutlineColor} />
+		</line>}
 
-		{!hasCustomImage && (
-			<Text position={[0, 0, 0.01]} color="black">
-				{card.databaseCard.name}
-			</Text>
-		)}
+		{powerIndicator}
 	</animated.group>
 })

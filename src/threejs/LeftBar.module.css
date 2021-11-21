@@ -1,0 +1,27 @@
+.left_Bar {
+	width: 250px;
+	padding: 5px;
+
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+
+	position: fixed;
+	left: 0;
+	top: 0;
+	z-index: 1;
+}
+
+.card_info {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+
+	background-color: rgba(155, 155, 155, 0.3);
+}
+
+.card_info img {
+	width: 90%;
+}

@@ -10,17 +10,26 @@ import { GamePlayer } from "./GamePlayer"
 import { Position } from "./utils/Position"
 import { GameQuery, GameQueryManager } from "./GameQueryManager"
 import { ScriptTarget, transpile } from "typescript"
+import { ActionGameCard } from "./cards/ActionGameCard"
+import { MinionGameCard } from "./cards/MinionGameCard"
 
 export type PlayerID = number
 export type GameCardId = number
 
 export enum GamePhase {
-	FactionSelect,
-	InitialDraw,
+	Setup_FactionSelect,
+	Setup_BuildBaseDeck,
+	Setup_PrepareTheMonsterandTreasureDecks,
+	Setup_PreparetheMadnessDeck,
+	Setup_DrawBases,
+	Setup_DrawHands,
 
-	GameTurn_Play,
+
+	GameTurn_Start,
+	GameTurn_PlayCards,
 	GameTurn_ScoreBase,
 	GameTurn_Draw,
+	GameTurn_EndTurn,
 
 	ToDo
 }
@@ -52,14 +61,17 @@ export class GameState {
 
 	currentAction: GameAction
 	
-	activatedEffectQueue: {card_id: number, effect: string}[]
+	activatedEffectQueue: {card_id: GameCardId, effect: string}[]
+	history: {card_id: GameCardId}[]
 
 	cardNextId: GameCardId
 	cards: Record<GameCardId, GameCard>
 
 	players: GamePlayer[]
 	turnPlayerId: PlayerID
-	bases: GameCardId[]
+
+	bases_deck: GameCardId[]
+	in_play_bases: GameCardId[]
 
 	constructor(server: GameServer) {
 		this.server = server
@@ -81,12 +93,15 @@ export class GameState {
 			}),
 		]
 		this.turnPlayerId = 0
-		this.bases = []
+
+		this.bases_deck = []
+		this.in_play_bases = []
 
 		this.haveToInitPhase = true
-		this.phase = GamePhase.FactionSelect
+		this.phase = GamePhase.Setup_FactionSelect
 
 		this.activatedEffectQueue = []
+		this.history = []
 
 		this.currentAction = observable.object({
 			type: GameCurrentActionType.None
@@ -94,17 +109,6 @@ export class GameState {
 
 		makeAutoObservable(this, {
 			server: false
-		})
-
-		// Temp Init
-		this.moveCard(this.generateCard(Bases[0]).id, {
-			position: "board"
-		})
-		this.moveCard(this.generateCard(Bases[1]).id, {
-			position: "board"
-		})
-		this.moveCard(this.generateCard(Bases[2]).id, {
-			position: "board"
 		})
 	}
 
@@ -122,7 +126,7 @@ export class GameState {
 		}
 
 		switch (this.phase) {
-			case GamePhase.FactionSelect: {
+			case GamePhase.Setup_FactionSelect: {
 				this.players[0].setFactions([Faction.Aliens])
 				this.players[0].name = "Giocatore 1"
 				this.players[0].color = "aqua"
@@ -132,18 +136,68 @@ export class GameState {
 				this.players[1].color = "orange"
 
 
-				this.setPhase(GamePhase.InitialDraw)
+				this.setPhase(GamePhase.Setup_BuildBaseDeck)
 				break
 			}
-			case GamePhase.InitialDraw: {
+
+			case GamePhase.Setup_BuildBaseDeck: {
+				const base_0 = this.generateCard(Bases[0]).id
+				const base_1 = this.generateCard(Bases[1]).id
+				const base_2 = this.generateCard(Bases[2]).id
+				const base_3 = this.generateCard(Bases[3]).id
+
+				this.moveCard(base_0, {
+					position: "bases_deck"
+				})
+				this.moveCard(base_1, {
+					position: "bases_deck"
+				})
+				this.moveCard(base_2, {
+					position: "bases_deck"
+				})
+				this.moveCard(base_3, {
+					position: "bases_deck"
+				})
+
+				this.setPhase(GamePhase.Setup_PrepareTheMonsterandTreasureDecks)
+				break
+			}
+
+			case GamePhase.Setup_PrepareTheMonsterandTreasureDecks: {
+				this.setPhase(GamePhase.Setup_PreparetheMadnessDeck)
+				break
+			}
+			case GamePhase.Setup_PreparetheMadnessDeck: {
+				this.setPhase(GamePhase.Setup_DrawBases)
+				break
+			}
+			case GamePhase.Setup_DrawBases: {
+				this.moveCard(this.bases_deck[0], {
+					position: "board"
+				})
+				this.moveCard(this.bases_deck[0], {
+					position: "board"
+				})
+				this.moveCard(this.bases_deck[0], {
+					position: "board"
+				})
+
+				this.setPhase(GamePhase.Setup_DrawHands)
+				break
+			}
+			case GamePhase.Setup_DrawHands: {
 				for (const player of this.players) {
 					player.draw(5)
 				}
 
-				this.setPhase(GamePhase.GameTurn_Play)
+				this.setPhase(GamePhase.GameTurn_Start)
 				break
 			}
-			case GamePhase.GameTurn_Play: {
+			case GamePhase.GameTurn_Start: {
+				this.setPhase(GamePhase.GameTurn_PlayCards)
+				break
+			}
+			case GamePhase.GameTurn_PlayCards: {
 				if (this.haveToInitPhase) {
 					for (const player of this.players) {
 						if (player.id === this.turnPlayerId) {
@@ -160,7 +214,7 @@ export class GameState {
 				break
 			}
 			case GamePhase.GameTurn_ScoreBase: {
-				for (const baseID of this.bases) {
+				for (const baseID of this.in_play_bases) {
 					const base = this.cards[baseID]
 					if (!base.isBaseCard()) {
 						throw new Error("The base card isn't a base...")
@@ -173,7 +227,7 @@ export class GameState {
 								runner.player.victoryPoints += base.databaseCard.points[i]
 							}
 						}
-						this.bases = this.bases.filter(item => item !== baseID)
+						this.in_play_bases = this.in_play_bases.filter(item => item !== baseID)
 					}
 				}
 
@@ -182,12 +236,15 @@ export class GameState {
 			}
 			case GamePhase.GameTurn_Draw: {
 				this.turnPlayer.draw(2)
-					
+				this.setPhase(GamePhase.GameTurn_EndTurn)
+				break
+			}
+			case GamePhase.GameTurn_EndTurn: {
 				this.turnPlayerId++
 				if (this.turnPlayerId === 2) {
 					this.turnPlayerId = 0
 				}
-				this.setPhase(GamePhase.GameTurn_Play)
+				this.setPhase(GamePhase.GameTurn_PlayCards)
 				break
 			}
 			case GamePhase.ToDo: {
@@ -225,7 +282,7 @@ export class GameState {
 	}
 
 	endTurn() {
-		if (this.phase === GamePhase.GameTurn_Play) {
+		if (this.phase === GamePhase.GameTurn_PlayCards) {
 			this.setPhase(GamePhase.GameTurn_ScoreBase)
 		}
 	}
@@ -271,32 +328,63 @@ export class GameState {
 		this.activatedEffectQueue.push({ card_id, effect })
 	}
 
-	playCard(card_id: number, playerID: PlayerID, newPosition: Position) {
-		const card = this.cards[card_id]
-		if (!card) {
-			return
+	async playMinionCard(card: MinionGameCard, playerID: PlayerID, newPosition: Position) {
+		if (this.players[playerID].minionPlays <= 0) {
+			throw new Error("You don't have enought minion plays")
+		}
+	
+		
+		if (card.position.position === "hand") {
+			if (newPosition.position === "base") {
+				this.players[playerID].minionPlays -= 1
+				this.moveCard(card.id, newPosition)
+				card.onPlay()
+			}
+		}
+
+	}
+
+	async playActionCard(card: ActionGameCard, playerID: PlayerID, newPosition?: Position) {
+		if (this.players[playerID].actionPlays <= 0) {
+			throw new Error("You don't have enought action plays")
+		}
+		if (card.owner_id === null) {
+			throw new Error("We need an owner to know the discard pile where to send the card")
 		}
 
 		if (card.position.position === "hand") {
-			if (newPosition.position === "base") {
-				if (card.isMinionCard()) {
-					if (this.players[playerID].minionPlays > 0) {
-						this.players[playerID].minionPlays--
-					} else {
-						return
-					}
-				}
-				if (card.isActionCard()) {
-					if (this.players[playerID].actionPlays > 0) {
-						this.players[playerID].actionPlays--
-					} else {
-						return
-					}
-				}
+			this.players[playerID].actionPlays--
 
-				this.moveCard(card_id, newPosition)
-				card.onPlay()
+			this.moveCard(card.id, {
+				position: "is-about-to-be-played",
+				playerID: card.owner_id
+			})
+
+			await card.onPlay()
+
+			this.moveCard(card.id, {
+				position: "discard-pile",
+				playerID: card.owner_id
+			})
+		}
+	}
+
+	playCard(card_id: number, playerID: PlayerID, newPosition?: Position) {
+		const card = this.getCard(card_id)
+		if (card === null) {
+			throw new Error("The card does not exist")
+		}
+		if (card.isMinionCard()) {
+			if (newPosition === undefined) {
+				throw new Error("[newPosition] is undefined")
 			}
+			this.playMinionCard(card, playerID, newPosition)
+		} else if (card.isActionCard()) {
+			this.playActionCard(card, playerID, newPosition)
+		} else if (card.isBaseCard()) {
+			throw new Error("TODO Implementare")
+		} else {
+			throw new Error("Attention, this card is not yet supported")
 		}
 	}
 
@@ -312,6 +400,14 @@ export class GameState {
 				this.players[position.playerID].deck = this.players[position.playerID].deck.filter(cardID => cardID !== gameCard.id)
 				break
 			}
+			case "is-about-to-be-played": {
+				this.players[position.playerID].aboutToBePlayedCards = this.players[position.playerID].aboutToBePlayedCards.filter(cardID => cardID !== gameCard.id)
+				break
+			}
+			case "discard-pile": {
+				this.players[position.playerID].discardPile = this.players[position.playerID].discardPile.filter(cardID => cardID !== gameCard.id)
+				break
+			}
 			case "base": {
 				const base = this.getCard(position.base_id) as BaseGameCard
 				if (!base) {
@@ -319,6 +415,10 @@ export class GameState {
 				}
 
 				base.attached_cards = base.attached_cards.filter(cardID => cardID !== gameCard.id)
+				break
+			}
+			case "bases_deck": {
+				this.bases_deck = this.bases_deck.filter(cardID => cardID !== gameCard.id)
 				break
 			}
 			case "no-position": {
@@ -335,6 +435,7 @@ export class GameState {
 
 	moveCard(cardID: number, newPosition: Position) {
 		this.removeCardFromItsPosition(cardID)
+		
 		const card = this.getCard(cardID)
 
 		if (!card) {
@@ -362,10 +463,27 @@ export class GameState {
 				}
 
 				player.hand.push(cardID)
-				card.position = {
-					...newPosition,
-					index: player.hand.length - 1
+				card.position = newPosition
+				break
+			}
+			case "is-about-to-be-played": {
+				const player = this.players[newPosition.playerID]
+				if (!player) {
+					throw new Error(`The player [${newPosition.playerID}] does not exist`)
 				}
+
+				player.aboutToBePlayedCards.push(cardID)
+				card.position = newPosition
+				break
+			}
+			case "discard-pile": {
+				const player = this.players[newPosition.playerID]
+				if (!player) {
+					throw new Error(`The player [${newPosition.playerID}] does not exist`)
+				}
+
+				player.discardPile.push(cardID)
+				card.position = newPosition
 				break
 			}
 			case "deck": {
@@ -385,11 +503,20 @@ export class GameState {
 				if (!card.isBaseCard()) {
 					throw new Error("Trying to move a non-base card on the board")
 				}
-				this.bases.push(cardID)
+				this.in_play_bases.push(cardID)
 				card.position = {
 					...newPosition,
-					index: this.bases.length - 1
+					index: this.in_play_bases.length - 1
 				}
+				break
+			}
+			case "bases_deck": {
+				if (!card.isBaseCard()) {
+					throw new Error("Trying to move a non-base card in the bases deck")
+				}
+				this.bases_deck.push(cardID)
+				card.position = newPosition
+				break
 			}
 		}
 	}
@@ -400,7 +527,8 @@ export class GameState {
 			phase: this.phase,
 			currentAction: this.currentAction,
 			activatedEffectQueue: this.activatedEffectQueue,
-			bases: this.bases,
+			bases: this.in_play_bases,
+			bases_deck: this.bases_deck,
 			cards: Object.fromEntries(Object.entries(this.cards).map(([cardId, card]) => {
 				return [cardId, card.serialize()]
 			})),
@@ -414,7 +542,8 @@ export class GameState {
 		this.phase = data.phase
 		this.currentAction = data.currentAction
 		this.activatedEffectQueue = data.activatedEffectQueue
-		this.bases = data.bases
+		this.in_play_bases = data.bases
+		this.bases_deck = data.bases_deck
 		this.cards = Object.fromEntries(Object.entries(data.cards).map(([cardId, card]) => {
 			return [cardId, gameCardDeserializer({
 				gameState: this,

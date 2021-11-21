@@ -1,5 +1,8 @@
 import { CardType } from "../data/CardType";
+import { ActionGameCard } from "../game/cards/ActionGameCard";
+import { BaseGameCard } from "../game/cards/BaseGameCard";
 import { GameCard } from "../game/cards/GameCard";
+import { MinionGameCard } from "../game/cards/MinionGameCard";
 import { GameState } from "../game/GameState";
 import { Faction } from "./core_set/Factions";
 import { ActionDatabaseCard, BaseDatabaseCard, DatabaseCard, MinionDatabaseCard } from "./DatabaseCard";
@@ -14,7 +17,7 @@ export interface MinionDatabaseCardPrototype {
 	description: string
 	image?: string
 
-	initializeEffects?: (card: GameCard, gameState: GameState) => void
+	initializeEffects?: (card: MinionGameCard, gameState: GameState) => void
 
 	power: number
 }
@@ -27,7 +30,7 @@ export interface ActionDatabaseCardPrototype {
 	description: string
 	image?: string
 	
-	initializeEffects?: (card: GameCard, gameState: GameState) => void
+	initializeEffects?: (card: ActionGameCard, gameState: GameState) => void
 
 }
 export interface BaseDatabaseCardPrototype {
@@ -38,7 +41,7 @@ export interface BaseDatabaseCardPrototype {
 	description: string
 	image?: string
 	
-	initializeEffects?: (card: GameCard, gameState: GameState) => void
+	initializeEffects?: (card: BaseGameCard, gameState: GameState) => void
 
 	breakpoint: number
 	points: number[]

@@ -1,4 +1,4 @@
-import { DatabaseCard } from "../../database/DatabaseCard"
+import { ActionDatabaseCard, BaseDatabaseCard, DatabaseCard, MinionDatabaseCard } from "../../database/DatabaseCard"
 import { Position } from "../utils/Position"
 import { GameState, PlayerID } from "../GameState"
 import { BaseGameCard } from "./BaseGameCard"
@@ -8,6 +8,7 @@ import { CardType } from "../../data/CardType"
 import { GamePlayer } from "../GamePlayer"
 import { GameCardEffect, GenericPositions } from "./CardEffects"
 import { transpile } from "typescript"
+import { GameQuery } from "../GameQueryManager"
 
 type CardId = number
 
@@ -19,6 +20,8 @@ export abstract class GameCard {
 	owner_id: PlayerID | null
 	controller_id: PlayerID | null
 	effects: GameCardEffect[]
+
+	database_card_id: string;
 	
 	abstract type: CardType
 
@@ -41,6 +44,7 @@ export abstract class GameCard {
 			position: "no-position"
 		}
 		this.effects = []
+		this.database_card_id = "";
 
 		this.owner_id = null;
 		this.controller_id = null;
@@ -57,22 +61,35 @@ export abstract class GameCard {
 	}
 
 	initializeEffects() {
-		if (this.databaseCard.initializeEffects) {
-			this.databaseCard.initializeEffects(this, this.gameState)
+		if (this.databaseCard instanceof MinionDatabaseCard) {
+			if (this.isMinionCard()) {
+				this.databaseCard.initializeEffects?.(this, this.gameState)
+			}
 		}
+
+		if (this.databaseCard instanceof ActionDatabaseCard) {
+			if (this.isActionCard()) {
+				this.databaseCard.initializeEffects?.(this, this.gameState)
+			}
+		}
+
+		if (this.databaseCard instanceof BaseDatabaseCard) {
+			if (this.isBaseCard()) {
+				this.databaseCard.initializeEffects?.(this, this.gameState)
+			}
+		}
+		
 	}
 
 	registerEffect(effect: GameCardEffect) {
 		this.effects.push(effect)
 	}
 
-	onPlay() {
-		this.queryEffects("on-play")
-			.forEach(effect => {
-				// eslint-disable-next-line no-eval
-				const callback = eval(transpile(effect.callback))
-				callback(this, this.gameState)
-			})
+	async onPlay() {
+		for (const effect of this.queryEffects("on-play")) {
+			const callback = eval(transpile(effect.callback))
+			await callback(this, this.gameState)
+		}
 	}
 
 	queryEffects(effectType: string) {

@@ -1,5 +1,6 @@
 import { useGameScreenContext } from "../react/views/GameScreenContext"
 import card_back from "../assets/standard_card_back.png";
+import classes from "./LeftBar.module.css"
 
 export const LeftBar = () => {
 
@@ -18,10 +19,13 @@ export const LeftBar = () => {
 
 	
 
-	return <div style={{width: 250, padding: 5, display: "flex", flexDirection: "column", alignItems: "center"}}>
-		{gameCard && <div>
-			<img alt="" style={{width: "90%"}} src={textureName} />
+	return <div className={classes.left_Bar}>
+		{gameCard && <div className={classes.card_info}>
+			<img alt="" src={textureName} />
 			<p>{gameCard.databaseCard.name}</p>
+			{gameCard.isBaseCard() && <p>
+				Breakpoint: {gameCard.breakpoint}
+			</p>}
 			<p>{gameCard.databaseCard.description}</p>
 		</div>}
 		
