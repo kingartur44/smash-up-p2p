@@ -2,7 +2,7 @@ import { Vector3 } from "@react-three/fiber";
 import { useMemo } from "react";
 import { Shape } from "three"
 import { GameCardId, PlayerID } from "../core_game/game/GameState";
-import { useGameScreenContext } from "../react/views/GameScreenContext";
+import { useGameScreenContext } from "../GameScreenContext";
 import { PLAYERS_COLORS, usePositions } from "./usePositions"
 
 

@@ -4,7 +4,7 @@ import { Text } from '@react-three/drei';
 import { DoubleSide, Euler, Shape, TextureLoader } from 'three';
 import { GameCard } from '../core_game/game/cards/GameCard';
 import { observer } from 'mobx-react-lite';
-import { useGameScreenContext } from '../react/views/GameScreenContext';
+import { useGameScreenContext } from '../GameScreenContext';
 import { GameCurrentActionType } from '../core_game/game/GameState';
 import { useSpring, animated } from '@react-spring/three'
 import { usePositions } from './usePositions';
@@ -181,7 +181,7 @@ export const Card3DModel: FC<Card3DModelProps> = observer(({ position: propsPosi
 		<mesh onPointerOver={event => {
 				event.stopPropagation()
 				setIsHovered(true)
-				setHoveredCard(card.id)
+				setHoveredCard(isFlipped ? null : card.id)
 			}}
 			onPointerOut={event => {
 				event.stopPropagation()

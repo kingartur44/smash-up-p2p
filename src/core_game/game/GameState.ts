@@ -72,6 +72,7 @@ export class GameState {
 
 	bases_deck: GameCardId[]
 	in_play_bases: GameCardId[]
+	bases_discard_pile: GameCardId[]
 
 	constructor(server: GameServer) {
 		this.server = server
@@ -96,6 +97,7 @@ export class GameState {
 
 		this.bases_deck = []
 		this.in_play_bases = []
+		this.bases_discard_pile = []
 
 		this.haveToInitPhase = true
 		this.phase = GamePhase.Setup_FactionSelect
@@ -227,7 +229,32 @@ export class GameState {
 								runner.player.victoryPoints += base.databaseCard.points[i]
 							}
 						}
-						this.in_play_bases = this.in_play_bases.filter(item => item !== baseID)
+
+						for (const cardID of base.attached_cards) {
+							const card = this.getCard(cardID)
+							if (card === null) {
+								throw new Error("This card should exist")
+							}
+							if (card.owner_id === null) {
+								throw new Error("The card has no owner")
+							}
+							this.moveCard(cardID, {
+								position: "discard-pile",
+								playerID: card.owner_id
+							})
+						}
+						this.moveCard(baseID, {
+							position: "bases_discard_pile"
+						})
+
+						const newBase = this.getCard(this.bases_deck[0])
+						if (!newBase) {
+							throw new Error("TODO Error: you have to shuffle the deck if it's empty")
+						}
+						this.moveCard(newBase.id, {
+							position: "board"
+						})
+
 					}
 				}
 
@@ -417,15 +444,23 @@ export class GameState {
 				base.attached_cards = base.attached_cards.filter(cardID => cardID !== gameCard.id)
 				break
 			}
+			case "bases_discard_pile": {
+				this.bases_discard_pile = this.bases_discard_pile.filter(cardID => cardID !== gameCard.id)
+				break
+			}
 			case "bases_deck": {
 				this.bases_deck = this.bases_deck.filter(cardID => cardID !== gameCard.id)
+				break
+			}
+			case "board": {
+				this.in_play_bases = this.in_play_bases.filter(cardID => cardID !== gameCard.id)
 				break
 			}
 			case "no-position": {
 				break
 			}
 			default: {
-				throw new Error(`Position [${position.position}] not implemented`)
+				throw new Error(`Position [${JSON.stringify(position)}] not implemented`)
 			}
 		}
 		gameCard.position = {
@@ -504,10 +539,7 @@ export class GameState {
 					throw new Error("Trying to move a non-base card on the board")
 				}
 				this.in_play_bases.push(cardID)
-				card.position = {
-					...newPosition,
-					index: this.in_play_bases.length - 1
-				}
+				card.position = newPosition
 				break
 			}
 			case "bases_deck": {
@@ -515,6 +547,14 @@ export class GameState {
 					throw new Error("Trying to move a non-base card in the bases deck")
 				}
 				this.bases_deck.push(cardID)
+				card.position = newPosition
+				break
+			}
+			case "bases_discard_pile": {
+				if (!card.isBaseCard()) {
+					throw new Error("Trying to move a non-base card in the bases deck")
+				}
+				this.bases_discard_pile.push(cardID)
 				card.position = newPosition
 				break
 			}

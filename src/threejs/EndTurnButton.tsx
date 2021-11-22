@@ -1,7 +1,7 @@
 import { observer } from "mobx-react-lite"
 import { FC } from "react"
 import { GamePhase } from "../core_game/game/GameState"
-import { useGameScreenContext } from "../react/views/GameScreenContext"
+import { useGameScreenContext } from "../GameScreenContext"
 import classes from "./EndTurnButton.module.css"
 
 export const EndTurnButton: FC = observer(() => {

@@ -1,6 +1,6 @@
 import React, { useContext } from "react";
-import { GameState } from "../../core_game/game/GameState";
-import { GameServer } from "../../core_game/GameServer";
+import { GameState } from "./core_game/game/GameState";
+import { GameServer } from "./core_game/GameServer";
 
 interface GameScreenContextInterface {
 	gameServer: GameServer

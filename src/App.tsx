@@ -3,7 +3,7 @@ import { observer } from 'mobx-react-lite';
 import { GameServer } from './core_game/GameServer';
 import { ThreeJSContainer } from './threejs/ThreeJSContainer';
 import { GameCardId } from './core_game/game/GameState';
-import { GameScreenContext } from './react/views/GameScreenContext';
+import { GameScreenContext } from './GameScreenContext';
 
 
 export const App = observer(() => {

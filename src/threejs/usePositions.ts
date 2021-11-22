@@ -3,7 +3,7 @@ import { Euler } from "three"
 import { GameCard } from "../core_game/game/cards/GameCard"
 import { GameCardId, GameState, PlayerID } from "../core_game/game/GameState"
 import { AboutToBePlayedPosition, BasePosition, BasesDeckPosition, DiscardPilePosition, HandPosition } from "../core_game/game/utils/Position"
-import { useGameScreenContext } from "../react/views/GameScreenContext"
+import { useGameScreenContext } from "../GameScreenContext"
 
 const TABLE_Z_ZERO = 0
 
@@ -45,7 +45,7 @@ interface PositionsOutput {
 	getCardDiscardPilePosition: (card: GameCard, position: DiscardPilePosition) => PositionAndRotation
 	getCardHandPosition: (card: GameCard, position: HandPosition) => PositionAndRotation
 	getAboutToBePlayedPosition: (card: GameCard, position: AboutToBePlayedPosition) => PositionAndRotation
-	getBasePosition: (index: number) => PositionAndRotation
+	getBasePosition: (card: GameCard) => PositionAndRotation
 	getBasesDeckPosition: (card: GameCard) => PositionAndRotation
 
 	getCardOnBasePosition: (card: GameCard, position: BasePosition) => PositionAndRotation
@@ -71,7 +71,7 @@ export function usePositions(): PositionsOutput {
 			},
 			{
 				position: [-4, 4, TABLE_Z_ZERO + cardElevation],
-				rotation:new Euler(0)
+				rotation: new Euler(Math.PI, 0, 0)
 			}
 		]
 
@@ -97,7 +97,7 @@ export function usePositions(): PositionsOutput {
 			},
 			{
 				position: [-6, 4, TABLE_Z_ZERO + cardElevation],
-				rotation:new Euler(0)
+				rotation: new Euler(Math.PI, 0, 0)
 			}
 		]
 		const referencePosition = position.playerID === gameServer.playerID ? 0 : 1
@@ -152,7 +152,12 @@ export function usePositions(): PositionsOutput {
 	
 
 
-	function getBasePosition(index: number): PositionAndRotation {
+	function getBasePosition(card: GameCard): PositionAndRotation {
+		const index = gameState.in_play_bases.findIndex(card_id => card_id === card.id)
+		if (index === -1) {
+			throw new Error("The base is not in play")
+		}
+
 		return {
 			position: [
 				-4,
@@ -231,6 +236,11 @@ export function usePositions(): PositionsOutput {
 			throw new Error("Warning, the card is not a base")
 		}
 
+		const baseIndex = gameState.in_play_bases.findIndex(card_id => card_id === base.id)
+		if (baseIndex === -1) {
+			throw new Error("Logic Error: the base isn't in play")
+		}
+
 		const playerCards = base.playerCards
 
 		const zones = [] as {
@@ -250,7 +260,7 @@ export function usePositions(): PositionsOutput {
 				player: parseInt(playerID),
 				position: [
 					-4 + leftSpacing, // X
-					calcBaseYCoordinate((base.position as any).index, gameState), // Y
+					calcBaseYCoordinate(baseIndex, gameState), // Y
 					TABLE_Z_ZERO // Z
 				],
 				size: [

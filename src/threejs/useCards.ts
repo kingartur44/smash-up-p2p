@@ -1,4 +1,4 @@
-import { useGameScreenContext } from "../react/views/GameScreenContext"
+import { useGameScreenContext } from "../GameScreenContext"
 import { Card3DModelProps } from "./Card3DModel"
 import { usePositions } from "./usePositions"
 
@@ -63,10 +63,7 @@ export function useCards(): Card3DModelProps[] {
 			}
 
 			case "board": {
-				if (position.index === undefined) {
-					throw new Error("Attenzione, l'index è a 0")
-				}
-				const cardPR = positions.getBasePosition(position.index)
+				const cardPR = positions.getBasePosition(card)
 
 				cardPrototypes.push({
 					key: card.id,

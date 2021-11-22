@@ -1,4 +1,4 @@
-import { useGameScreenContext } from "../react/views/GameScreenContext"
+import { useGameScreenContext } from "../GameScreenContext"
 import card_back from "../assets/standard_card_back.png";
 import classes from "./LeftBar.module.css"
 

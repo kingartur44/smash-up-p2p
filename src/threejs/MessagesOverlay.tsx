@@ -1,4 +1,4 @@
-import { useGameScreenContext } from "../react/views/GameScreenContext"
+import { useGameScreenContext } from "../GameScreenContext"
 import classes from "./MessagesOverlay.module.css"
 import { GameCurrentActionType } from "../core_game/game/GameState";
 import { observer } from "mobx-react-lite";
