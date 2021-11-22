@@ -59,7 +59,10 @@ const Set = generateSet(Faction.Aliens, [
 				callback: `async (card, gameState) => {
 					const controller = card.controller
 					if (controller) {
-						controller.victoryPoints += 1
+						controller.increseVictoryPoints({
+							amount: 1,
+							detail: "You activated the on-play effect of the invader"
+						})
 					}
 				}`
 			})

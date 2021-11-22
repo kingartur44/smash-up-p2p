@@ -1,8 +1,9 @@
 import { useGameScreenContext } from "../GameScreenContext"
 import card_back from "../assets/standard_card_back.png";
 import classes from "./LeftBar.module.css"
+import { observer } from "mobx-react-lite";
 
-export const LeftBar = () => {
+export const LeftBar = observer(() => {
 
 	const { gameState, hoveredCard } = useGameScreenContext()
 	const gameCard = hoveredCard ? gameState.getCard(hoveredCard) : undefined
@@ -30,4 +31,4 @@ export const LeftBar = () => {
 		</div>}
 		
 	</div>
-}
+})

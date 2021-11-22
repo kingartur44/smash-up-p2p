@@ -117,7 +117,7 @@ export const Card3DModel: FC<Card3DModelProps> = observer(({ position: propsPosi
 	const { isPlayable, isATargetCard, isSelected, onCardAction } = useGameCard(card)
 
 	const effectiveRotation = useMemo(() => {
-		let pRotation = propsRotation || new Euler();
+		const pRotation = propsRotation || new Euler();
 		return pRotation;
 	}, [ propsRotation ]);
 
@@ -138,7 +138,7 @@ export const Card3DModel: FC<Card3DModelProps> = observer(({ position: propsPosi
 			width: CARD_WIDTH,
 			height: CARD_HEIGHT
 		}
-	}, [card.isBaseCard])
+	}, [card, CARD_WIDTH, CARD_HEIGHT])
 	
 	const cardOutlineColor = (() => {
 		if (isPlayable || isSelected) {
@@ -175,7 +175,7 @@ export const Card3DModel: FC<Card3DModelProps> = observer(({ position: propsPosi
 		const shape = new Shape()
 		drawRectFromCenter({shape, centerX: 0, centerY: 0, width: cardSize.width, height: cardSize.height})
 		return shape
-	}, [CARD_WIDTH, CARD_HEIGHT])
+	}, [cardSize])
 
 	return <animated.group position={position as any} rotation={rotation} scale={isHovered ? 1.05 : 1}>
 		<mesh onPointerOver={event => {

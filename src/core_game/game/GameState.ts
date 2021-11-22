@@ -116,10 +116,9 @@ export class GameState {
 
 	nextStep() {
 		if (this.activatedEffectQueue.length > 0) {
-			let nextEffect = this.activatedEffectQueue.pop()
+			const nextEffect = this.activatedEffectQueue.pop()
 			if (nextEffect) {
 				const card = this.getCard(nextEffect.card_id)
-				// eslint-disable-next-line no-eval
 				const callback = eval(transpile(nextEffect.effect, {
 					target: ScriptTarget.ESNext
 				}))
@@ -225,8 +224,22 @@ export class GameState {
 						const runners = base.sortedPlayersPower
 						for (let i = 0; i < base.databaseCard.points.length; i++) {
 							const runner = runners[i]
-							if (runner) {
-								runner.player.victoryPoints += base.databaseCard.points[i]
+							if (runner !== undefined) {
+								const numeral = (() => {
+									if (i === 0) {
+										return "1st"
+									} else if (i === 1) {
+										return "2nd"
+									} else if (i === 2) {
+										return "3rd"
+									} else {
+										return (i + 1) + "th"
+									}
+								})
+								runner.player.increseVictoryPoints({
+									amount: base.databaseCard.points[i],
+									detail: `You made the ${numeral} place at the base ${base.databaseCard.name}`
+								})
 							}
 						}
 
@@ -436,8 +449,8 @@ export class GameState {
 				break
 			}
 			case "base": {
-				const base = this.getCard(position.base_id) as BaseGameCard
-				if (!base) {
+				const base = this.getCard(position.base_id) as BaseGameCard | null
+				if (base === null) {
 					throw new Error(`The card [${position.base_id}] does not exist`)
 				}
 
@@ -479,8 +492,8 @@ export class GameState {
 
 		switch (newPosition.position) {
 			case "base": {
-				const base = this.getCard(newPosition.base_id) as BaseGameCard
-				if (!base) {
+				const base = this.getCard(newPosition.base_id) as BaseGameCard | null
+				if (base === null) {
 					throw new Error(`The card [${newPosition.base_id}] does not exist`)
 				}
 
@@ -492,8 +505,8 @@ export class GameState {
 				break
 			}
 			case "hand": {
-				const player = this.players[newPosition.playerID]
-				if (!player) {
+				const player = this.players[newPosition.playerID] as GamePlayer | undefined
+				if (player === undefined) {
 					throw new Error(`The player [${newPosition.playerID}] does not exist`)
 				}
 
@@ -502,8 +515,8 @@ export class GameState {
 				break
 			}
 			case "is-about-to-be-played": {
-				const player = this.players[newPosition.playerID]
-				if (!player) {
+				const player = this.players[newPosition.playerID] as GamePlayer | undefined
+				if (player === undefined) {
 					throw new Error(`The player [${newPosition.playerID}] does not exist`)
 				}
 
@@ -512,8 +525,8 @@ export class GameState {
 				break
 			}
 			case "discard-pile": {
-				const player = this.players[newPosition.playerID]
-				if (!player) {
+				const player = this.players[newPosition.playerID] as GamePlayer | undefined
+				if (player === undefined) {
 					throw new Error(`The player [${newPosition.playerID}] does not exist`)
 				}
 
@@ -522,8 +535,8 @@ export class GameState {
 				break
 			}
 			case "deck": {
-				const player = this.players[newPosition.playerID]
-				if (!player) {
+				const player = this.players[newPosition.playerID] as GamePlayer | undefined
+				if (player === undefined) {
 					throw new Error(`The player [${newPosition.playerID}] does not exist`)
 				}
 

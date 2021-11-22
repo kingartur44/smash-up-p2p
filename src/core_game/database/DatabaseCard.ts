@@ -1,7 +1,6 @@
 import { CardType } from "../data/CardType"
 import { ActionGameCard } from "../game/cards/ActionGameCard"
 import { BaseGameCard } from "../game/cards/BaseGameCard"
-import { GameCard } from "../game/cards/GameCard"
 import { MinionGameCard } from "../game/cards/MinionGameCard"
 import { GameState } from "../game/GameState"
 

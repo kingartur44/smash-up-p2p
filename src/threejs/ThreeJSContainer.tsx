@@ -1,6 +1,6 @@
 import { FC, Suspense, useRef } from 'react'
 import { Camera, Canvas } from '@react-three/fiber'
-import { MapControls, PerspectiveCamera, useContextBridge } from '@react-three/drei'
+import { PerspectiveCamera, useContextBridge } from '@react-three/drei'
 import { Euler } from 'three'
 import { GameScreenContext } from '../GameScreenContext'
 import { observer } from 'mobx-react-lite'
@@ -8,18 +8,17 @@ import { Table } from './Table'
 import { Card3DModel } from './Card3DModel'
 import { useCards } from './useCards'
 import { EndTurnButton } from './EndTurnButton'
-import { LeftBar } from './LeftBar'
-import { MessagesOverlay } from './MessagesOverlay'
+import { LeftBar } from '../standard_components/LeftBar'
+import { MessagesOverlay } from '../standard_components/MessagesOverlay'
+import { TopBar } from '../standard_components/TopBar'
 
 
-interface ThreeJSContainerProps {
-	
-}
-export const ThreeJSContainer: FC<ThreeJSContainerProps> = observer(() => {
+export const ThreeJSContainer: FC = observer(() => {
 
 
 	return <div>
 		<div style={{display: "flex"}}>
+			<TopBar />
 			<LeftBar />
 			<MessagesOverlay />
 			<Suspense fallback={"Loading..."}>
@@ -48,7 +47,6 @@ export const ThreeFiberScene = observer(() => {
 	}}> 
 		<Canvas>
 			<color attach="background" args={["cyan"]} />
-			{/* <MapControls camera={currentCamera.current} /> */}
 
 			<ContextBridge>
 				<PerspectiveCamera ref={currentCamera}

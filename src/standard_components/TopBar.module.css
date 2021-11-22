@@ -1,0 +1,40 @@
+.top_bar {
+	width: 100%;
+	height: 22px;
+	background-color: rgba(155, 155, 155, 0.3);
+
+	display: flex;
+	flex-direction: row;
+	justify-content: center;
+	align-items: center;
+
+	position: fixed;
+	left: 0;
+	top: 0;
+	z-index: 1;
+}
+
+.top_bar *:first-child {
+	margin-right: 15px;
+}
+
+.player_detail {
+	user-select: none;
+}
+
+.victory_points_detail {
+	display: none;
+}
+.player_detail:hover {
+	outline: 1px solid gray;
+}
+.player_detail:hover .victory_points_detail {
+	display: block;
+}
+
+.victory_points_detail {
+	background-color: rgba(155, 155, 155, 0.3);
+	border: 1px solid gray;
+
+	position: fixed;
+}

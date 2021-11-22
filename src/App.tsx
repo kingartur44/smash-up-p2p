@@ -51,14 +51,21 @@ const ConnectComponent: FC<ConnectComponentProps> = ({gameServer}) => {
 
 	const [value, setValue] = useState("")
 
-
 	const connect = () => {
 		gameServer.connectionManager.connect(value)
+	}
+
+	const autoConnect = () => {
+		if (gameServer.connectionManager.peerID !== undefined) {
+			gameServer.connectionManager.connect(gameServer.connectionManager.peerID)
+		}
+		
 	}
 
 	return <div>
 		<input value={value} onChange={e => setValue(e.target.value)} />
 		<button onClick={connect}>Connect</button>
+		<button onClick={autoConnect}>Auto Connect</button>
 	</div>
 }
 

@@ -97,7 +97,7 @@ export class BaseGameCard extends GameCard {
 				continue
 			}
 			
-			if (!cards[cardController]) {
+			if (cards[cardController] === undefined) {
 				cards[cardController] = []
 			}
 			cards[cardController].push(card_id)

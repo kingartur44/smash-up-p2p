@@ -31,7 +31,7 @@ export const Table = () => {
 	const { gameState } = useGameScreenContext()
 
 	const deckZones = useMemo(() => {
-		let zones = [] as {
+		const zones = [] as {
 			playerID: PlayerID
 			position: Vector3
 			shape: Shape
@@ -62,7 +62,7 @@ export const Table = () => {
 	}, [getCardDeckPosition, gameState.players, CARD_WIDTH, CARD_HEIGHT, STANDARD_PADDING])
 
 	const basePlayersZone = useMemo(() => {
-		let drawZones = [] as {
+		const drawZones = [] as {
 			playerID: PlayerID
 			baseID: GameCardId
 			position: Vector3

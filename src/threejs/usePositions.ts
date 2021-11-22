@@ -1,8 +1,7 @@
-import { Vector3 } from "@react-three/fiber"
 import { Euler } from "three"
 import { GameCard } from "../core_game/game/cards/GameCard"
 import { GameCardId, GameState, PlayerID } from "../core_game/game/GameState"
-import { AboutToBePlayedPosition, BasePosition, BasesDeckPosition, DiscardPilePosition, HandPosition } from "../core_game/game/utils/Position"
+import { AboutToBePlayedPosition, BasePosition, DiscardPilePosition, HandPosition } from "../core_game/game/utils/Position"
 import { useGameScreenContext } from "../GameScreenContext"
 
 const TABLE_Z_ZERO = 0
@@ -125,7 +124,7 @@ export function usePositions(): PositionsOutput {
 				rotation: new Euler(Math.PI / 4)
 			},
 			{
-				position: [0 + cardXAdjustment, 4, 4],
+				position: [0 + cardXAdjustment, 4, 3],
 				rotation: new Euler(Math.PI / 4)
 			},
 		]

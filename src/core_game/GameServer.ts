@@ -59,7 +59,7 @@ export class GameServer {
 
 		if (isPickTargetMessage(message)) {
 			const currentAction = this.gameState.currentAction
-			if (!currentAction || currentAction.type !== GameCurrentActionType.ChooseTarget) {
+			if (currentAction.type !== GameCurrentActionType.ChooseTarget) {
 				throw new Error("The current action isn't 'ChooseTarget'")
 			}
 			currentAction.sendTargetCallback(message.cardId)

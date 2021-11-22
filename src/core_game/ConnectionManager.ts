@@ -14,13 +14,13 @@ export class ConnectionManager {
 	constructor(gameServer: GameServer) {
 		this.gameServer = gameServer
 
-		this.isMaster = true
+		this.isMaster = false
 		this.peer = new Peer()
 		this.peer.on("open", id => {
 			runInAction(() => this.peerID = id)
 		})
 		this.peer.on("connection", dataConnection => {
-			this.isMaster = false
+			this.isMaster = true
 			this.setDataConnection(dataConnection)
 		})
 
@@ -28,7 +28,7 @@ export class ConnectionManager {
 	}
 
 	connect(otherPeerId: string) {
-		this.isMaster = true
+		this.isMaster = false
 		this.setDataConnection(this.peer.connect(otherPeerId))
 	}
 

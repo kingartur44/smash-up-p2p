@@ -12,7 +12,8 @@ export class GamePlayer {
 	name: string;
 	color: string;
 
-	victoryPoints: number;
+	victoryPointsDetailed: {amount: number, detail: string}[]
+
 	minionPlays: number;
 	actionPlays: number;
 
@@ -30,7 +31,8 @@ export class GamePlayer {
 		this.name = "";
 		this.color = "";
 
-		this.victoryPoints = 0;
+		this.victoryPointsDetailed = [];
+
 		this.minionPlays = 0;
 		this.actionPlays = 0;
 
@@ -44,6 +46,16 @@ export class GamePlayer {
 		makeAutoObservable(this, {
 			gameState: false
 		});
+	}
+
+	get victoryPoints(): number {
+		return this.victoryPointsDetailed.reduce((acc, item) => {
+			return acc + item.amount
+		}, 0)
+	}
+
+	increseVictoryPoints(item: {amount: number, detail: string}) {
+		this.victoryPointsDetailed.push(item)
 	}
 
 	setFactions(factions: string[]) {
@@ -83,7 +95,7 @@ export class GamePlayer {
 	draw(amount: number) {
 		for (let i = 0; i < amount; i++) {
 			const cardId = this.deck.pop()
-			if (!cardId) {
+			if (cardId === undefined) {
 				throw new Error("Attenzione, il deck è vuoto")
 			}
 			this.gameState.moveCard(cardId, {
@@ -99,7 +111,7 @@ export class GamePlayer {
 			name: this.name,
 			color: this.color,
 
-			victoryPoints: this.victoryPoints,
+			victoryPointsDetailed: this.victoryPointsDetailed,
 			minionPlays: this.minionPlays,
 			actionPlays: this.actionPlays,
 
@@ -116,7 +128,7 @@ export class GamePlayer {
 		this.id = input.id;
 		this.name = input.name;
 		this.color = input.color
-		this.victoryPoints = input.victoryPoints;
+		this.victoryPointsDetailed = input.victoryPointsDetailed;
 
 		this.minionPlays = input.minionPlays
 		this.actionPlays = input.actionPlays

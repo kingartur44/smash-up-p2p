@@ -8,7 +8,6 @@ import { CardType } from "../../data/CardType"
 import { GamePlayer } from "../GamePlayer"
 import { GameCardEffect, GenericPositions } from "./CardEffects"
 import { transpile } from "typescript"
-import { GameQuery } from "../GameQueryManager"
 
 type CardId = number
 

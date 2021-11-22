@@ -1,0 +1,25 @@
+{
+	"root": true,
+	"parser": "@typescript-eslint/parser",
+	"parserOptions": {
+        "project": ["./tsconfig.json"]
+    },
+	"plugins": [
+		"@typescript-eslint"
+	],
+	"extends": [
+		"react-app",
+		"react-app/jest"
+	],
+	"rules": {
+		"no-eval": 0,
+
+		"prefer-const": 1,
+		
+		"@typescript-eslint/strict-boolean-expressions": [1,  {
+			"allowNullableBoolean": true,
+			"allowNullableString": true,
+			"allowNullableNumber": true
+		}]
+	}
+}

@@ -52,7 +52,6 @@ export class MinionGameCard extends GameCard {
 		let cardPower = this.databaseCard.power
 		this.queryEffects("power-boost")
 			.forEach(effect => {
-				// eslint-disable-next-line no-eval
 				const callback = eval(transpile(effect.callback))
 				cardPower += callback(this, this.gameState)
 			})
@@ -60,7 +59,7 @@ export class MinionGameCard extends GameCard {
 	}
 
 	get targets(): number[] {
-		let targets = [];
+		const targets = [];
 		for (const card of Object.values(this.gameState.cards)) {
 			if (card.isBaseCard()) {
 				targets.push(card.id);

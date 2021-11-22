@@ -1,7 +1,6 @@
 import { CardType } from "../data/CardType";
 import { ActionGameCard } from "../game/cards/ActionGameCard";
 import { BaseGameCard } from "../game/cards/BaseGameCard";
-import { GameCard } from "../game/cards/GameCard";
 import { MinionGameCard } from "../game/cards/MinionGameCard";
 import { GameState } from "../game/GameState";
 import { Faction } from "./core_set/Factions";
@@ -60,7 +59,7 @@ export function generateSet(faction: Faction, prototypes: DatabaseCardPrototypes
 
 	let counter = 0
 	for (const prototype of prototypes) {
-		let card_id = `${faction.toLocaleLowerCase()}-${counter}-${prototype.name.toLocaleLowerCase().replaceAll(" ", "-")}`
+		const card_id = `${faction.toLocaleLowerCase()}-${counter}-${prototype.name.toLocaleLowerCase().replaceAll(" ", "-")}`
 		counter++
 
 		const card = (() => {

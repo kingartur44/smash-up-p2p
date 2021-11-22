@@ -8,7 +8,7 @@ export function useCards(): Card3DModelProps[] {
 
 	const positions = usePositions()
 
-	let cardPrototypes: Card3DModelProps[] = []
+	const cardPrototypes: Card3DModelProps[] = []
 
 	for (const card of Object.values(gameState.cards)) {
 		const position = card.position
