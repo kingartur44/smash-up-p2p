@@ -15,13 +15,18 @@ export class ConnectionManager {
 		this.gameServer = gameServer
 
 		this.isMaster = false
-		this.peer = new Peer()
+		this.peer = new Peer(undefined, {
+			debug: 2
+		})
 		this.peer.on("open", id => {
 			runInAction(() => this.peerID = id)
 		})
 		this.peer.on("connection", dataConnection => {
 			this.isMaster = true
 			this.setDataConnection(dataConnection)
+		})
+		this.peer.on("error", error => {
+			console.error(error)
 		})
 
 		makeAutoObservable(this)

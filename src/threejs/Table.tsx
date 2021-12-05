@@ -26,9 +26,9 @@ export function drawRectFromCenter({shape, centerX, centerY, width, height}: {sh
 
 export const Table = () => {
 
-	const { getCardDeckPosition, getPlayerCardsZoneForBase, CARD_WIDTH, CARD_HEIGHT, STANDARD_PADDING } = usePositions()
+	const { getPlayerDeckPosition, getPlayerCardsZoneForBase, CARD_WIDTH, CARD_HEIGHT, STANDARD_PADDING } = usePositions()
 
-	const { gameState } = useGameScreenContext()
+	const { clientGameState } = useGameScreenContext()
 
 	const deckZones = useMemo(() => {
 		const zones = [] as {
@@ -38,8 +38,8 @@ export const Table = () => {
 			width: number
 		}[]
 
-		for (const player of gameState.players) {
-			const deckZone = getCardDeckPosition(player.id, 0).position
+		for (const player of clientGameState.players) {
+			const deckZone = getPlayerDeckPosition(player.id)
 			const shape = new Shape()
 			const width = CARD_WIDTH + STANDARD_PADDING
 			drawRectFromCenter({
@@ -59,7 +59,7 @@ export const Table = () => {
 		}
 		
 		return zones
-	}, [getCardDeckPosition, gameState.players, CARD_WIDTH, CARD_HEIGHT, STANDARD_PADDING])
+	}, [getPlayerDeckPosition, clientGameState.players, CARD_WIDTH, CARD_HEIGHT, STANDARD_PADDING])
 
 	const basePlayersZone = useMemo(() => {
 		const drawZones = [] as {
@@ -69,7 +69,8 @@ export const Table = () => {
 			shape: Shape
 		}[]
 
-		for (const baseID of gameState.in_play_bases) {
+		for (const base of clientGameState.in_play_bases) {
+			const baseID = base.id
 			const zones = getPlayerCardsZoneForBase(baseID)
 			
 			for (const zone of zones) {
@@ -97,7 +98,7 @@ export const Table = () => {
 		}
 
 		return drawZones
-	}, [gameState.in_play_bases, getPlayerCardsZoneForBase])
+	}, [clientGameState.in_play_bases, getPlayerCardsZoneForBase])
 
 
 	return <group position={[0, 0, 0]}>

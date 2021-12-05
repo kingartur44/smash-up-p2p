@@ -1,4 +1,4 @@
-import { GameCardId, PlayerID } from "../game/GameState";
+import { GameCardId, PlayerID } from "../../game/GameState";
 
 export interface PickTargetMessage {
 	type: "pick_target"

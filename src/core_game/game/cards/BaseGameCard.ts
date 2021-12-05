@@ -5,6 +5,7 @@ import { GameCardId, GameState, PlayerID } from "../GameState";
 import { GameCard } from "./GameCard";
 import { GamePlayer } from "../GamePlayer";
 import { CardType } from "../../data/CardType";
+import { GameCardStack } from "../GameCardStack";
 
 
 export class BaseGameCard extends GameCard {
@@ -12,7 +13,7 @@ export class BaseGameCard extends GameCard {
 	type: CardType.Base;
 
 	
-	attached_cards: number[];
+	attached_cards: GameCardStack;
 
 	constructor(gameState: GameState) {
 		super(gameState)
@@ -20,7 +21,7 @@ export class BaseGameCard extends GameCard {
 		this.type = CardType.Base;
 
 		
-		this.attached_cards = [];
+		this.attached_cards = new GameCardStack(gameState);
 
 		makeObservable(this, {
 			id: observable,
@@ -87,11 +88,7 @@ export class BaseGameCard extends GameCard {
 	get playerCards(): Record<PlayerID, GameCardId[]> {
 		const cards: Record<PlayerID, GameCardId[]> = {}
 
-		for (const card_id of this.attached_cards) {
-			const card = this.gameState.getCard(card_id);
-			if (card === null) {
-				throw new Error(`Warning, card [${card_id}] does not exist`)
-			}
+		for (const card of this.attached_cards.cards) {
 			const cardController = card.controller_id
 			if (cardController === null) {
 				continue
@@ -100,7 +97,7 @@ export class BaseGameCard extends GameCard {
 			if (cards[cardController] === undefined) {
 				cards[cardController] = []
 			}
-			cards[cardController].push(card_id)
+			cards[cardController].push(card.id)
 		}
 
 		return cards
@@ -109,11 +106,7 @@ export class BaseGameCard extends GameCard {
 	get playerBasedPowerOnBase(): Record<PlayerID, number> {
 		const powerMap: Record<PlayerID, number> = {}
 
-		for (const card_id of this.attached_cards) {
-			const card = this.gameState.getCard(card_id);
-			if (card === null) {
-				throw new Error(`Warning, card [${card_id}] does not exist`)
-			}
+		for (const card of this.attached_cards.cards) {
 			const cardController = card.controller_id
 			if (cardController === null) {
 				continue

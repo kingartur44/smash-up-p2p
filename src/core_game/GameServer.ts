@@ -1,20 +1,33 @@
 import { makeAutoObservable } from "mobx";
 import { ConnectionManager } from "./ConnectionManager";
 import { GameCurrentActionType, GameState } from "./game/GameState";
-import { GameMessage } from "./game_messages/GameMessage";
-import { isEndTurnMessage } from "./game_messages/EndTurnMessage";
-import { isPlayCardMessage } from "./game_messages/PlayCardMessage";
-import { isUpdateGameStateMessage, UpdateGameStateMessage } from "./game_messages/UpdateGameStateMessage";
-import { isPickTargetMessage } from "./game_messages/PickTargetMessage";
+import { isEndTurnMessage } from "./server_messages/game_messages/EndTurnMessage";
+import { isPlayCardMessage } from "./server_messages/game_messages/PlayCardMessage";
+import { isPickTargetMessage } from "./server_messages/game_messages/PickTargetMessage";
+import { ClientGameState } from "./client_game/ClientGameState";
+import { isUpdateClientGameStateMessage, UpdateClientGameStateMessage } from "./server_messages/game_messages/UpdateClientGameStateMessage";
+import { ChatManager, ClientChatManager } from "./ChatManager";
+import { isUpdateChatManagerMessage, UpdateChatManagerMessage } from "./server_messages/UpdateChatManagerMessage";
+import { isSendChatMessageMessage } from "./server_messages/SendChatMessageMessage";
+import { ServerMessage } from "./server_messages/ServerMessage";
 
 export class GameServer {
 	connectionManager: ConnectionManager
-	gameState: GameState
 
+	gameState: GameState
+	clientGameState: ClientGameState
+
+	chatManager: ChatManager
+	clientChatManager: ClientChatManager
 
 	constructor() {
 		this.connectionManager = new ConnectionManager(this)
+
 		this.gameState = new GameState(this)
+		this.clientGameState = this.gameState.toClientGameState()
+
+		this.chatManager = new ChatManager(this)
+		this.clientChatManager = this.chatManager.toClientChatManager()
 
 		makeAutoObservable(this, {
 			gameState: false
@@ -29,8 +42,12 @@ export class GameServer {
 	}
 
 	receiveGameMessage(message: any) {
-		if (isUpdateGameStateMessage(message)) {
-			this.gameState.deserialize(message.gameState)
+		if (isUpdateClientGameStateMessage(message)) {
+			this.clientGameState = JSON.parse(message.clientGameState)
+			return
+		}
+		if (isUpdateChatManagerMessage(message)) {
+			this.clientChatManager = JSON.parse(message.client_chat_manager)
 			return
 		}
 	
@@ -38,6 +55,13 @@ export class GameServer {
 			return
 		}
 
+		if (isSendChatMessageMessage(message)) {
+			this.chatManager.addMessage({
+				author: message.user,
+				message: message.message
+			})
+			return
+		}
 
 		if (isEndTurnMessage(message)) {
 			if (this.gameState.turnPlayerId !== message.playerID) {
@@ -74,19 +98,42 @@ export class GameServer {
 			throw new Error("Attenzione, sei solo il client, non il server")
 		}
 
-		const message: UpdateGameStateMessage = {
-			type: "update_game_state",
-			gameState: this.gameState.serialize()
+		this.clientGameState = this.gameState.toClientGameState()
+
+		const message: UpdateClientGameStateMessage = {
+			type: "update_client_game_state",
+			clientGameState: JSON.stringify(this.clientGameState)
 		}
+
 		this.connectionManager.dataConnection?.send(message)
 	}
 
-	sendGameMessage(message: GameMessage) {
+	sendServerMessage(message: ServerMessage) {
 		if (this.isMaster) {
 			this.receiveGameMessage(message)
 		} else {
 			this.connectionManager.dataConnection?.send(message)
 		}
+	}
+
+
+	sendChatMessagesUpdate() {
+		this.clientChatManager = this.chatManager.toClientChatManager()
+
+		const message: UpdateChatManagerMessage = {
+			type: "update_chat_manager",
+			client_chat_manager: JSON.stringify(this.clientChatManager)
+		}
+
+		this.connectionManager.dataConnection?.send(message)
+	}
+
+	sendChatMessage(message: string) {
+		this.sendServerMessage({
+			type: "send_chat_message",
+			user: this.isMaster ? "Player 1" : "Player 2",
+			message: message
+		})
 	}
 
 	get isMaster(): boolean {

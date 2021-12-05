@@ -4,10 +4,10 @@ import classes from "./TopBar.module.css"
 
 export const TopBar = observer(() => {
 
-	const { gameState } = useGameScreenContext()
+	const { clientGameState } = useGameScreenContext()
 
 	return <div className={classes.top_bar}>
-		{gameState.players.map((player, index) => {
+		{clientGameState.players.map((player, index) => {
 			return <div className={classes.player_detail} key={index}>
 				{player.name} - {player.victoryPoints} VP
 				<div className={classes.victory_points_detail}>

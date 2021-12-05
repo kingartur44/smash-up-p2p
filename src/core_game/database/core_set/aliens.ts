@@ -15,6 +15,7 @@ import probe_image from "../../../assets/aliens/probe.png"
 import jammed_signal_image from "../../../assets/aliens/jammed signal.png"
 import supreme_overlord_image from "../../../assets/aliens/supreme overlord.png"
 import terraforming_image from "../../../assets/aliens/terraforming.png"
+import { GenericPositions } from "../../game/cards/CardEffects"
 
 
 const Set = generateSet(Faction.Aliens, [
@@ -29,18 +30,16 @@ const Set = generateSet(Faction.Aliens, [
 		power: 5,
 		initializeEffects: async (card, gameState) => {
 			card.registerEffect({
-				type: "on-play",
-				callback: `async (card, gameState) => {
+				type: "on-play-minion",
+				callback: async (card, gameState) => {
 					const target = await gameState.pickTarget({
-						cardType: [${CardType.Minion}],
-						minionFilter: {
-							position: [
-								"on-the-board"
-							]
+						cardType: [CardType.Minion],
+						filters: {
+							position: ["on-the-board"]
 						}
 					}, "Scegli un minion da far tornare in mano", true)
 					target?.returnToOwnerHand()
-				}`
+				}
 			})
 		}
 	},
@@ -55,8 +54,8 @@ const Set = generateSet(Faction.Aliens, [
 		power: 3,
 		initializeEffects: (card, gameState) => {
 			card.registerEffect({
-				type: "on-play",
-				callback: `async (card, gameState) => {
+				type: "on-play-minion",
+				callback: async (card, gameState) => {
 					const controller = card.controller
 					if (controller) {
 						controller.increseVictoryPoints({
@@ -64,7 +63,7 @@ const Set = generateSet(Faction.Aliens, [
 							detail: "You activated the on-play effect of the invader"
 						})
 					}
-				}`
+				}
 			})
 		}
 	},
@@ -76,7 +75,14 @@ const Set = generateSet(Faction.Aliens, [
 		description: "Special: After this base is scored, you may place this minion into your hand instead of the discard pile.",
 		image: scout_image,
 
-		power: 3
+		power: 3,
+		initializeEffects: (card) => {
+			card.registerEffect({
+				type: "after-base-score_override-destination",
+				isOptional: true,
+				newDestination: GenericPositions.Hand
+			})
+		}
 	},
 
 	{	
@@ -90,10 +96,10 @@ const Set = generateSet(Faction.Aliens, [
 		power: 2,
 		initializeEffects: async (card, gameState) => {
 			card.registerEffect({
-				type: "on-play",
-				callback: `async (card, gameState) => {
+				type: "on-play-minion",
+				callback: async (card, gameState) => {
 					const target = await gameState.pickTarget({
-						cardType: [${CardType.Minion}],
+						cardType: [CardType.Minion],
 						filters: {
 							position: [
 								"on-the-board"
@@ -111,7 +117,7 @@ const Set = generateSet(Faction.Aliens, [
 						}
 					}, "Scegli un minion da far tornare in mano", true)
 					target?.returnToOwnerHand()
-				}`
+				}
 			})
 		}
 	},
@@ -133,8 +139,11 @@ const Set = generateSet(Faction.Aliens, [
 			}
 			
 			card.registerEffect({
-				type: "on-play",
-				callback: `async (card, gameState) => {
+				type: "on-play-action",
+				callback: async (card, gameState) => {
+					if (!card.playTargetQuery) {
+						return
+					}
 					const target = await gameState.pickTarget(
 						card.playTargetQuery,
 						"Scegli un minion da far tornare in mano",
@@ -145,7 +154,7 @@ const Set = generateSet(Faction.Aliens, [
 					if (card.controller) {
 						card.controller.minionPlays += 1
 					}
-				}`
+				}
 			})
 		}
 	},
@@ -167,15 +176,18 @@ const Set = generateSet(Faction.Aliens, [
 			}
 			
 			card.registerEffect({
-				type: "on-play",
-				callback: `async (card, gameState) => {
+				type: "on-play-action",
+				callback: async (card, gameState) => {
+					if (!card.playTargetQuery) {
+						return
+					}
 					const target = await gameState.pickTarget(
 						card.playTargetQuery,
 						"Scegli un minion da far tornare in mano",
 						true
 					)
 					target?.returnToOwnerHand()
-				}`
+				}
 			})
 		}
 	},
@@ -197,8 +209,11 @@ const Set = generateSet(Faction.Aliens, [
 			}
 
 			card.registerEffect({
-				type: "on-play",
-				callback: `async (card, gameState) => {
+				type: "on-play-action",
+				callback: async (card, gameState) => {
+					if (!card.playTargetQuery) {
+						return
+					}
 					const target = await gameState.pickTarget(
 						card.playTargetQuery,
 						"Scegli una base. Tutti i minion su quella base torneranno in mano ai rispettivi proprietari",
@@ -208,10 +223,10 @@ const Set = generateSet(Faction.Aliens, [
 						throw new Error("The selected card isn't a base")
 					}
 					
-					target.attached_cards.forEach(card_id => {
-						gameState.getCard(card_id)?.returnToOwnerHand()
-					})
-				}`
+					for (const card of target.attached_cards.cards) {
+						card.returnToOwnerHand()
+					}
+				}
 			})
 		}
 	},
@@ -227,11 +242,53 @@ const Set = generateSet(Faction.Aliens, [
 
 	{
 		type: CardType.Action,
-		quantityInDeck: 1,
+		quantityInDeck: 10,
 
 		name: "Invasion",
 		description: "Move a minion to another base.",
-		image: invasion_image
+		image: invasion_image,
+		initializeEffects: async (card, gameState) => {
+			card.playTargetQuery = {
+				cardType: [CardType.Minion],
+				filters: {
+					position: ["on-the-board"]
+				}
+			}
+
+			card.registerEffect({
+				type: "on-play-action",
+				callback: async (card, gameState) => {
+					if (!card.playTargetQuery) {
+						return
+					}
+
+					const targetMinion = await gameState.pickTarget(
+						card.playTargetQuery,
+						"Choose a minion to move to another base",
+						false
+					)
+					if (!targetMinion) {
+						return
+					}
+					
+					if (card.position.position !== "base") {
+						throw new Error("The position is not right")
+					}
+
+					const targetBase = await gameState.pickTarget({
+						cardType: [CardType.Base],
+						filters: {
+							position: ["on-the-board"]
+						},
+						excludedCards: [card.position.base_id]
+					}, "Choose the base where to move the minion", false)
+					card.moveCard({
+						position: "base",
+						base_id: targetBase!.id
+					})
+				}
+			})
+		}
 	},
 
 	{

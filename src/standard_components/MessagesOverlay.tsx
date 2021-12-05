@@ -1,21 +1,20 @@
 import { useGameScreenContext } from "../GameScreenContext"
 import classes from "./MessagesOverlay.module.css"
-import { GameCurrentActionType } from "../core_game/game/GameState";
 import { observer } from "mobx-react-lite";
 
 export const MessagesOverlay = observer(() => {
 
-	const { gameState, gameServer } = useGameScreenContext()
+	const { clientGameState, gameServer } = useGameScreenContext()
 
-	switch (gameState.currentAction.type) {
-		case GameCurrentActionType.None: {
+	switch (clientGameState.currentAction.type) {
+		case "None": {
 			return null
 		}
 
-		case GameCurrentActionType.ChooseTarget: {
-			const canSelectNull = gameState.currentAction.canSelectNull
+		case "ChooseTarget": {
+			const canSelectNull = clientGameState.currentAction.canSelectNull
 			const selectNullCallback = () => {
-				gameServer.sendGameMessage({
+				gameServer.sendServerMessage({
 					type: "pick_target",
 					cardId: null,
 					playerID: gameServer.playerID
@@ -23,7 +22,7 @@ export const MessagesOverlay = observer(() => {
 			}
 
 			return <div className={classes.prompt_screen}>
-				<span>{gameState.currentAction.prompt}</span>
+				<span>{clientGameState.currentAction.prompt}</span>
 				{canSelectNull && <button onClick={selectNullCallback}>Select None</button>}
 			</div>
 		}

@@ -51,12 +51,12 @@ const Set = generateSet(Faction.Dinosaurs, [
 			card.registerEffect({
 				type: "power-boost",
 				positionRequirement: GenericPosition.Field,
-				callback: `(card, gameState) => {
+				callback: (card, gameState) => {
 					if (gameState.turnPlayerId !== card.controller_id) {
 						return 2
 					}
 					return 0
-				}`
+				}
 			})
 		}
 	},
@@ -74,14 +74,14 @@ const Set = generateSet(Faction.Dinosaurs, [
 			card.registerEffect({
 				type: "power-boost",
 				positionRequirement: GenericPosition.Field,
-				callback: `(card, gameState) => {
-					const raptorCurrentBase = (card as MinionGameCard).card_current_base
+				callback: (card, gameState) => {
+					const raptorCurrentBase = card.card_current_base
 					if (!raptorCurrentBase) {
-						return
+						throw new Error("The raptor is not in play")
 					}
 	
 					const warRaptors = gameState.queryManager.executeQuery({
-						cardType: [${CardType.Minion}],
+						cardType: [CardType.Minion],
 						filters: {
 							position: [{
 								position: "base",
@@ -95,7 +95,7 @@ const Set = generateSet(Faction.Dinosaurs, [
 					})
 					
 					return warRaptors.length
-				}`
+				}
 			})
 		}
 	},

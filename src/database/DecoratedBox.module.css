@@ -1,0 +1,17 @@
+.box {
+	--spacing: 10px;
+	
+	display: inline-block;
+	position: relative;
+	border: 1px solid black;
+
+	padding: var(--spacing);
+	margin: var(--spacing);
+}
+
+.box_label {
+	position: absolute;
+	font-weight: bold;
+	top: calc(var(--spacing) * -1.25);
+	background-color: white;
+}

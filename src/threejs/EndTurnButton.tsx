@@ -1,29 +1,24 @@
 import { observer } from "mobx-react-lite"
 import { FC } from "react"
-import { GamePhase } from "../core_game/game/GameState"
 import { useGameScreenContext } from "../GameScreenContext"
 import classes from "./EndTurnButton.module.css"
 
 export const EndTurnButton: FC = observer(() => {
-	const { gameServer, gameState } = useGameScreenContext()
+	const { gameServer, clientGameState } = useGameScreenContext()
 
 	const endTurn = () => {
-		gameServer.sendGameMessage({
+		gameServer.sendServerMessage({
 			type: "end_turn",
 			playerID: gameServer.playerID
 		})
 	}
 
 	const isYellowBackground = (() => {
-		if (!gameState.isClientOwnerTurn) {
+		if (clientGameState.phase !== "GameTurn_PlayCards") {
 			return false
 		}
 
-		if (gameState.phase !== GamePhase.GameTurn_PlayCards) {
-			return false
-		}
-
-		for (const card of Object.values(gameState.cards)) {
+		for (const card of Object.values(clientGameState.cards)) {
 			if (card.isPlayable) {
 				return false
 			}

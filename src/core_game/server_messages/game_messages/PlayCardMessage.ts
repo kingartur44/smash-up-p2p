@@ -1,5 +1,5 @@
-import { PlayerID } from "../game/GameState";
-import { isPosition, Position } from "../game/utils/Position";
+import { PlayerID } from "../../game/GameState";
+import { isPosition, Position } from "../../game/position/Position";
 
 
 export interface PlayCardMessage {

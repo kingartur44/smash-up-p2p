@@ -7,8 +7,9 @@ import { GameScreenContext } from './GameScreenContext';
 
 
 export const App = observer(() => {
-
-	const [gameServer] = useState(new GameServer())
+	const [gameServer] = useState(() =>{
+		return new GameServer()
+	})
 
 	const [selectedCard, setSelectedCard] = useState(null as GameCardId | null)
 	const [hoveredCard, setHoveredCard] = useState(null as GameCardId | null)
@@ -32,11 +33,12 @@ export const App = observer(() => {
 			<ConnectComponent gameServer={gameServer} />
 		</div>
 	}
-	
 
 	return <GameScreenContext.Provider value={{
 		gameServer: gameServer,
-		gameState: gameServer.gameState,
+		clientGameState: gameServer.clientGameState,
+		clientChatManager: gameServer.clientChatManager,
+		
 		selectedCard, setSelectedCard,
 		hoveredCard, setHoveredCard
 	}}>

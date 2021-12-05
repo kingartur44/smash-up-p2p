@@ -1,8 +1,10 @@
 import { makeAutoObservable } from "mobx";
-import { shuffleArray } from "../../utils/shuffleArray";
 import { Aliens, Dinosaurs } from "../database/core_set/core_set";
 import { Faction } from "../database/core_set/Factions";
-import { GameCardId, GameState } from "./GameState";
+import { GameState } from "./GameState";
+import { ClientGamePlayer } from "../client_game/ClientGameState";
+import { GameCardStack } from "./GameCardStack";
+import { DatabaseCard } from "../database/DatabaseCard";
 
 
 export class GamePlayer {
@@ -17,10 +19,10 @@ export class GamePlayer {
 	minionPlays: number;
 	actionPlays: number;
 
-	deck: GameCardId[];
-	hand: GameCardId[];
-	discardPile: GameCardId[];
-	aboutToBePlayedCards: GameCardId[];
+	deck: GameCardStack;
+	hand: GameCardStack;
+	discardPile: GameCardStack;
+	aboutToBePlayedCards: GameCardStack;
 
 	factions: string[];
 
@@ -36,10 +38,10 @@ export class GamePlayer {
 		this.minionPlays = 0;
 		this.actionPlays = 0;
 
-		this.deck = [];
-		this.hand = [];
-		this.discardPile = [];
-		this.aboutToBePlayedCards = []
+		this.deck = new GameCardStack(gameState)
+		this.hand = new GameCardStack(gameState)
+		this.discardPile = new GameCardStack(gameState)
+		this.aboutToBePlayedCards = new GameCardStack(gameState)
 
 		this.factions = [];
 
@@ -60,45 +62,37 @@ export class GamePlayer {
 
 	setFactions(factions: string[]) {
 		this.factions = factions;
-		this.deck = [];
+		this.deck.empty()
+
 		for (const faction of factions) {
+			let selectedArray: DatabaseCard[]
 			if (faction === Faction.Aliens) {
-				this.deck = this.deck.concat(Aliens.map(databaseCard => {
-					const card = this.gameState.generateCard(databaseCard)
-					card.owner_id = this.id;
-					card.controller_id = this.id;
-					this.gameState.moveCard(card.id, {
-						position: "deck",
-						playerID: this.id
-					})
-					return card.id
-				}))
+				selectedArray = Aliens
+			} else if (faction === Faction.Dinosaurs) {
+				selectedArray = Dinosaurs
+			} else {
+				throw new Error("Unsupported faction")
 			}
-			if (faction === Faction.Dinosaurs) {
-				this.deck = this.deck.concat(Dinosaurs.map(databaseCard => {
-					const card = this.gameState.generateCard(databaseCard)
-					card.owner_id = this.id;
-					card.controller_id = this.id;
-					this.gameState.moveCard(card.id, {
-						position: "deck",
-						playerID: this.id
-					})
-					return card.id
-				}))
+
+			for (const databaseCard of selectedArray) {
+				const newCard = this.gameState.generateCard(databaseCard)
+				newCard.owner_id = this.id
+				newCard.controller_id = this.id
+				newCard.moveCard({
+					position: "deck",
+					playerID: this.id
+				})
 			}
 		}
-		
-		console.warn("LE POSIZIONI")
-		shuffleArray(this.deck)
+
+		this.deck.shuffle()
 	}
 
 	draw(amount: number) {
 		for (let i = 0; i < amount; i++) {
-			const cardId = this.deck.pop()
-			if (cardId === undefined) {
-				throw new Error("Attenzione, il deck è vuoto")
-			}
-			this.gameState.moveCard(cardId, {
+			const card = this.deck.getTopCard()
+			
+			card.moveCard({
 				position: "hand",
 				playerID: this.id
 			})
@@ -139,5 +133,25 @@ export class GamePlayer {
 		this.aboutToBePlayedCards = input.aboutToBePlayedCards
 
 		this.factions = input.factions;
+	}
+
+	toClientGamePlayer(): ClientGamePlayer {
+		return {
+			id: this.id,
+			name: this.name,
+
+			victoryPoints: this.victoryPoints,
+			victoryPointsDetailed: this.victoryPointsDetailed,
+			
+			minionPlays: this.minionPlays,
+			actionPlays: this.actionPlays,
+
+			deck: this.deck.toClientGameCardArray(),
+			hand: this.hand.toClientGameCardArray(),
+			discardPile: this.discardPile.toClientGameCardArray(),
+			aboutToBePlayedCards: this.aboutToBePlayedCards.toClientGameCardArray(),
+
+			factions: this.factions
+		};
 	}
 }

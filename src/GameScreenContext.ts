@@ -1,10 +1,12 @@
 import React, { useContext } from "react";
-import { GameState } from "./core_game/game/GameState";
+import { ClientChatManager } from "./core_game/ChatManager";
+import { ClientGameState } from "./core_game/client_game/ClientGameState";
 import { GameServer } from "./core_game/GameServer";
 
 interface GameScreenContextInterface {
 	gameServer: GameServer
-	gameState: GameState
+	clientGameState: ClientGameState
+	clientChatManager: ClientChatManager
 
 	selectedCard: number | null
 	setSelectedCard: React.Dispatch<React.SetStateAction<number | null>>

@@ -7,7 +7,6 @@ import { observer } from 'mobx-react-lite'
 import { Table } from './Table'
 import { Card3DModel } from './Card3DModel'
 import { useCards } from './useCards'
-import { EndTurnButton } from './EndTurnButton'
 import { LeftBar } from '../standard_components/LeftBar'
 import { MessagesOverlay } from '../standard_components/MessagesOverlay'
 import { TopBar } from '../standard_components/TopBar'
@@ -25,9 +24,6 @@ export const ThreeJSContainer: FC = observer(() => {
 				<ThreeFiberScene />
 			</Suspense>
 		</div>
-		<div>
-			<EndTurnButton />
-		</div>
 	</div>
 })
 
@@ -43,7 +39,7 @@ export const ThreeFiberScene = observer(() => {
 
 	return <div style={{
 		width: "100%",
-		height: 720
+		height: "100vh"
 	}}> 
 		<Canvas>
 			<color attach="background" args={["cyan"]} />

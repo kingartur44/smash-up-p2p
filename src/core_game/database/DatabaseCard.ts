@@ -4,6 +4,7 @@ import { BaseGameCard } from "../game/cards/BaseGameCard"
 import { MinionGameCard } from "../game/cards/MinionGameCard"
 import { GameState } from "../game/GameState"
 
+
 export class DatabaseCard {
 	type: CardType
 	id: string

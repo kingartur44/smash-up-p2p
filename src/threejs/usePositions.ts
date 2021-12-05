@@ -1,8 +1,9 @@
 import { Euler } from "three"
-import { GameCard } from "../core_game/game/cards/GameCard"
-import { GameCardId, GameState, PlayerID } from "../core_game/game/GameState"
-import { AboutToBePlayedPosition, BasePosition, DiscardPilePosition, HandPosition } from "../core_game/game/utils/Position"
+import { GameCardId, PlayerID } from "../core_game/game/GameState"
+import { AboutToBePlayedPosition, BasePosition } from "../core_game/game/position/Position"
+import { DeckPosition, DiscardPilePosition, HandPosition } from "../core_game/game/position/PlayerPositions"
 import { useGameScreenContext } from "../GameScreenContext"
+import { ClientGameCard, ClientGameState } from "../core_game/client_game/ClientGameState"
 
 const TABLE_Z_ZERO = 0
 
@@ -40,14 +41,16 @@ interface PositionsOutput {
 	CARD_MAX_DIMENSION: number
 	STANDARD_PADDING: number
 
-	getCardDeckPosition: (index: PlayerID, cardIndex: number) => PositionAndRotation
-	getCardDiscardPilePosition: (card: GameCard, position: DiscardPilePosition) => PositionAndRotation
-	getCardHandPosition: (card: GameCard, position: HandPosition) => PositionAndRotation
-	getAboutToBePlayedPosition: (card: GameCard, position: AboutToBePlayedPosition) => PositionAndRotation
-	getBasePosition: (card: GameCard) => PositionAndRotation
-	getBasesDeckPosition: (card: GameCard) => PositionAndRotation
+	getPlayerDeckPosition: (player: PlayerID) => Parameters<THREE.Vector3['set']>
 
-	getCardOnBasePosition: (card: GameCard, position: BasePosition) => PositionAndRotation
+	getCardDeckPosition: (card: ClientGameCard, position: DeckPosition) => PositionAndRotation
+	getCardDiscardPilePosition: (card: ClientGameCard, position: DiscardPilePosition) => PositionAndRotation
+	getCardHandPosition: (card: ClientGameCard, position: HandPosition) => PositionAndRotation
+	getAboutToBePlayedPosition: (card: ClientGameCard, position: AboutToBePlayedPosition) => PositionAndRotation
+	getBasePosition: (card: ClientGameCard) => PositionAndRotation
+	getBasesDeckPosition: (card: ClientGameCard) => PositionAndRotation
+
+	getCardOnBasePosition: (card: ClientGameCard, position: BasePosition) => PositionAndRotation
 	getPlayerCardsZoneForBase: (base_id: GameCardId) => {
 		player: PlayerID,
 		position: Parameters<THREE.Vector3['set']>,
@@ -57,20 +60,44 @@ interface PositionsOutput {
 
 export function usePositions(): PositionsOutput {
 
-	const { gameServer, gameState } = useGameScreenContext()
+	const { gameServer, clientGameState } = useGameScreenContext()
 
-	
-	function getCardDeckPosition(playerID: PlayerID, cardIndex: number) {
+	function getPlayerDeckPosition(player: PlayerID): Parameters<THREE.Vector3['set']> {
+		const data: Parameters<THREE.Vector3['set']>[] = [
+			[4, -4, TABLE_Z_ZERO],
+			[-4, 4, TABLE_Z_ZERO]
+		]
+		const referencePosition = player === gameServer.playerID ? 0 : 1
+		return data[referencePosition]
+	}
+
+	function getCardDeckPosition(card: ClientGameCard, deckPosition: DeckPosition): PositionAndRotation {
+		const playerID = deckPosition.playerID
+		if (playerID === null) {
+			throw new Error("Logic Error: The card has no controller")
+		}
+		const cardIndex = clientGameState.players[playerID].deck.findIndex(item => item.id === card.id)
+		if (cardIndex === -1) {
+			throw new Error("Logic Error: The card is not in the deck")
+		}
+
 		const cardElevation = cardIndex * 0.01
+		const deckGroundPosition = getPlayerDeckPosition(playerID)
+
+		const cardPosition: Parameters<THREE.Vector3['set']> = [
+			deckGroundPosition[0], 				// X
+			deckGroundPosition[1], 				// Y
+			deckGroundPosition[2] + cardElevation // Z
+		]
 
 		const data: PositionAndRotation[] = [
 			{
-				position: [4, -4, TABLE_Z_ZERO + cardElevation],
+				position: cardPosition,
 				rotation: new Euler(0)
 			},
 			{
-				position: [-4, 4, TABLE_Z_ZERO + cardElevation],
-				rotation: new Euler(Math.PI, 0, 0)
+				position: cardPosition,
+				rotation: new Euler(0, 0, Math.PI)
 			}
 		]
 
@@ -78,10 +105,10 @@ export function usePositions(): PositionsOutput {
 		return data[referencePosition]
 	}
 
-	function getCardDiscardPilePosition(card: GameCard, position: DiscardPilePosition) {
-		const playerDiscardPile = gameState.players[position.playerID].discardPile
+	function getCardDiscardPilePosition(card: ClientGameCard, position: DiscardPilePosition) {
+		const playerDiscardPile = clientGameState.players[position.playerID].discardPile
 
-		const cardIndex = playerDiscardPile.findIndex(card_id => card_id === card.id)
+		const cardIndex = playerDiscardPile.findIndex(item => item.id === card.id)
 		if (cardIndex === -1) {
 			throw new Error("The card is not in the discard pile")
 		}
@@ -103,9 +130,9 @@ export function usePositions(): PositionsOutput {
 		return positionsAndRotations[referencePosition]
 	}
 
-	function getCardHandPosition(card: GameCard, position: HandPosition) {
-		const playerHand = gameState.players[position.playerID].hand
-		const cardIndex = playerHand.findIndex(card_id => card_id === card.id)
+	function getCardHandPosition(card: ClientGameCard, position: HandPosition) {
+		const playerHand = clientGameState.players[position.playerID].hand
+		const cardIndex = playerHand.findIndex(item => item.id === card.id)
 		if (cardIndex === -1) {
 			throw new Error("The card is not in the hand")
 		}
@@ -132,7 +159,7 @@ export function usePositions(): PositionsOutput {
 		return positionsAndRotations[referencePosition]
 	}
 
-	function getAboutToBePlayedPosition(card: GameCard, position: AboutToBePlayedPosition) {
+	function getAboutToBePlayedPosition(card: ClientGameCard, position: AboutToBePlayedPosition) {
 
 		const positionsAndRotations: PositionAndRotation[] = [
 			{
@@ -151,8 +178,8 @@ export function usePositions(): PositionsOutput {
 	
 
 
-	function getBasePosition(card: GameCard): PositionAndRotation {
-		const index = gameState.in_play_bases.findIndex(card_id => card_id === card.id)
+	function getBasePosition(card: ClientGameCard): PositionAndRotation {
+		const index = clientGameState.in_play_bases.findIndex(item => item.id === card.id)
 		if (index === -1) {
 			throw new Error("The base is not in play")
 		}
@@ -160,17 +187,17 @@ export function usePositions(): PositionsOutput {
 		return {
 			position: [
 				-4,
-				calcBaseYCoordinate(index, gameState),
+				calcBaseYCoordinate(index, clientGameState),
 				TABLE_Z_ZERO
 			],
 			rotation: new Euler(0)
 		}
 	}
 
-	function getBasesDeckPosition(card: GameCard): PositionAndRotation {
-		const playerDiscardPile = gameState.bases_deck
+	function getBasesDeckPosition(card: ClientGameCard): PositionAndRotation {
+		const basesDeck = clientGameState.bases_deck
 
-		const cardIndex = playerDiscardPile.findIndex(card_id => card_id === card.id)
+		const cardIndex = basesDeck.findIndex(item => item.id === card.id)
 		if (cardIndex === -1) {
 			throw new Error("The card is not in the base deck")
 		}
@@ -187,26 +214,23 @@ export function usePositions(): PositionsOutput {
 		}
 	}
 
-	function getCardOnBasePosition(card: GameCard, position: BasePosition): PositionAndRotation {
-		const base = gameState.getCard(position.base_id)
-		if (!base) {
-			throw new Error("Warning, the base does not exist")
-		}
-		if (!base.isBaseCard()) {
-			throw new Error("Warning, the card is not a base")
+	function getCardOnBasePosition(card: ClientGameCard, position: BasePosition): PositionAndRotation {
+		const base = clientGameState.cards[position.base_id]
+		if (base.type !== "base") {
+			throw new Error("Logic Error: the card is not a base")
 		}
 		if (card.controller_id === null) {
 			throw new Error("Warning, the card has no controller")
 		}
 
-		const effectiveIndex = base.playerCards[card.controller_id].indexOf(card.id)
+		const effectiveIndex = base.playerCards[card.controller_id].findIndex(item => item === card.id)
 		if (effectiveIndex === -1) {
-			throw new Error("Error, check here")
+			throw new Error("")
 		}
 
 		const playerZone = getPlayerCardsZoneForBase(base.id).find(zone => zone.player === card.controller_id)
-		if (!playerZone) {
-			throw new Error("Error, check here")
+		if (playerZone === undefined) {
+			throw new Error("")
 		}
 
 
@@ -227,15 +251,12 @@ export function usePositions(): PositionsOutput {
 		position: Parameters<THREE.Vector3['set']>,
 		size: Parameters<THREE.Vector3['set']>
 	}[] {
-		const base = gameState.getCard(base_id)
-		if (!base) {
-			throw new Error("Warning, the base does not exist")
-		}
-		if (!base.isBaseCard()) {
-			throw new Error("Warning, the card is not a base")
+		const base = clientGameState.cards[base_id]
+		if (base.type !== "base") {
+			throw new Error("Logic Error: the card is not a base")
 		}
 
-		const baseIndex = gameState.in_play_bases.findIndex(card_id => card_id === base.id)
+		const baseIndex = clientGameState.in_play_bases.findIndex(item => item.id === base.id)
 		if (baseIndex === -1) {
 			throw new Error("Logic Error: the base isn't in play")
 		}
@@ -259,7 +280,7 @@ export function usePositions(): PositionsOutput {
 				player: parseInt(playerID),
 				position: [
 					-4 + leftSpacing, // X
-					calcBaseYCoordinate(baseIndex, gameState), // Y
+					calcBaseYCoordinate(baseIndex, clientGameState), // Y
 					TABLE_Z_ZERO // Z
 				],
 				size: [
@@ -284,6 +305,8 @@ export function usePositions(): PositionsOutput {
 		CARD_MAX_DIMENSION,
 		STANDARD_PADDING,
 
+		getPlayerDeckPosition,
+
 		getCardDeckPosition,
 		getCardDiscardPilePosition,
 		getCardHandPosition,
@@ -297,7 +320,7 @@ export function usePositions(): PositionsOutput {
 
 
 
-function calcBaseYCoordinate(index: number, gameState: GameState): number {
-	const zero_y_position = -Math.floor(gameState.in_play_bases.length / 2) * BASES_DISTANCE
+function calcBaseYCoordinate(index: number, clientGameState: ClientGameState): number {
+	const zero_y_position = -Math.floor(clientGameState.in_play_bases.length / 2) * BASES_DISTANCE
 	return zero_y_position + (index * BASES_DISTANCE)
 }

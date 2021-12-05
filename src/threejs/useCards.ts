@@ -4,13 +4,13 @@ import { usePositions } from "./usePositions"
 
 
 export function useCards(): Card3DModelProps[] {
-	const { gameState, gameServer } = useGameScreenContext()
+	const { clientGameState, gameServer } = useGameScreenContext()
 
 	const positions = usePositions()
 
 	const cardPrototypes: Card3DModelProps[] = []
 
-	for (const card of Object.values(gameState.cards)) {
+	for (const card of Object.values(clientGameState.cards)) {
 		const position = card.position
 		switch (position.position) {
 			case "hand": {
@@ -29,13 +29,9 @@ export function useCards(): Card3DModelProps[] {
 			}
 
 			case "deck": {
-				if (position.index === undefined) {
-					throw new Error("Attenzione, l'index è a 0")
-				}
-
 				const cardPR = positions.getCardDeckPosition(
-					position.playerID,
-					position.index
+					card,
+					position
 				)
 
 				cardPrototypes.push({

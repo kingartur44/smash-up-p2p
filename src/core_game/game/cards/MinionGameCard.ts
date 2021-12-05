@@ -4,8 +4,8 @@ import { action, computed, makeObservable, observable } from "mobx";
 import { GameCurrentActionType, GamePhase, GameState } from "../GameState";
 import { CardType } from "../../data/CardType";
 import { GameCard } from "./GameCard";
-import { transpile } from "typescript";
 import { BaseGameCard } from "./BaseGameCard";
+import { PowerBoostEffect } from "./CardEffects";
 
 
 export class MinionGameCard extends GameCard {
@@ -50,10 +50,9 @@ export class MinionGameCard extends GameCard {
 	
 	get power() {
 		let cardPower = this.databaseCard.power
-		this.queryEffects("power-boost")
+		this.queryEffects<PowerBoostEffect>("power-boost")
 			.forEach(effect => {
-				const callback = eval(transpile(effect.callback))
-				cardPower += callback(this, this.gameState)
+				cardPower += effect.callback(this, this.gameState)
 			})
 		return cardPower
 	}
@@ -91,7 +90,11 @@ export class MinionGameCard extends GameCard {
 		if (this.position.position !== "base") {
 			return undefined
 		}
-		return this.gameState.getCard(this.position.base_id) as BaseGameCard 
+		const base = this.gameState.getCard(this.position.base_id)
+		if (!base.isBaseCard()) {
+			throw new Error("Logic Error: The card is not a base")
+		}
+		return base
 	}
 
 

@@ -2,22 +2,21 @@ import { FC, useMemo, useState } from 'react';
 import { useLoader, Vector3 } from '@react-three/fiber';
 import { Text } from '@react-three/drei';
 import { DoubleSide, Euler, Shape, TextureLoader } from 'three';
-import { GameCard } from '../core_game/game/cards/GameCard';
 import { observer } from 'mobx-react-lite';
 import { useGameScreenContext } from '../GameScreenContext';
-import { GameCurrentActionType } from '../core_game/game/GameState';
 import { useSpring, animated } from '@react-spring/three'
 import { usePositions } from './usePositions';
 import { drawRectFromCenter } from './Table';
 
 import standard_card_back from "../assets/standard_card_back.png";
 import base_card_back from "../assets/base_card_back.png"
+import { ClientGameCard } from '../core_game/client_game/ClientGameState';
 
 
-function useGameCard(card: GameCard) {
+function useGameCard(card: ClientGameCard) {
 	const {
 		gameServer,
-		gameState,
+		clientGameState,
 		selectedCard,
 		setSelectedCard,
 	} = useGameScreenContext()
@@ -25,22 +24,18 @@ function useGameCard(card: GameCard) {
 	const isSelected = selectedCard === card.id
 
 	const isPlayable = useMemo(() => {
-		if (!gameState.isClientOwnerTurn) {
-			return false
-		}
-		
 		return card.isPlayable
-	}, [gameState.isClientOwnerTurn, card.isPlayable])
+	}, [card.isPlayable])
 
 	const isATargetCard = (() => {
 		if (selectedCard !== null) {
-			if (gameState.cards[selectedCard].targets.includes(card.id)) {
+			if (clientGameState.cards[selectedCard].targets.includes(card.id)) {
 				return true
 			}
 		}
 		
-		if (gameState.currentAction.type === GameCurrentActionType.ChooseTarget) {
-			if (gameState.currentAction.possibleTargets.includes(card.id)) {
+		if (clientGameState.currentAction.type === "ChooseTarget") {
+			if (clientGameState.currentAction.possibleTargets.includes(card.id)) {
 				return true
 			} 
 		}
@@ -49,8 +44,8 @@ function useGameCard(card: GameCard) {
 	})()
 
 	const onCardAction = () => {
-		if (gameState.currentAction.type === GameCurrentActionType.ChooseTarget) {
-			gameServer.sendGameMessage({
+		if (clientGameState.currentAction.type === "ChooseTarget") {
+			gameServer.sendServerMessage({
 				type: "pick_target",
 				cardId: card.id,
 				playerID: gameServer.playerID,
@@ -62,7 +57,7 @@ function useGameCard(card: GameCard) {
 			setSelectedCard(card.id)
 		} else if (isATargetCard) {
 			if (selectedCard) {
-				gameServer.sendGameMessage({
+				gameServer.sendServerMessage({
 					type: "play_card",
 					playerID: gameServer.playerID,
 					card_id: selectedCard,
@@ -91,7 +86,7 @@ export interface Card3DModelProps {
 	rotation?: Euler;
 	isFlipped?: boolean;
 
-	card: GameCard;
+	card: ClientGameCard;
 	key: any
 }
 export const Card3DModel: FC<Card3DModelProps> = observer(({ position: propsPosition, rotation: propsRotation, isFlipped, card }) => {
@@ -104,10 +99,10 @@ export const Card3DModel: FC<Card3DModelProps> = observer(({ position: propsPosi
 	const { CARD_WIDTH, CARD_HEIGHT} = usePositions()
 
 	// Immagine Carta
-	const imageName = card.databaseCard.image
+	const imageName = card.databaseCard.image as string
 	const hasCustomImage = imageName !== undefined;
 	const textureName = (hasCustomImage && !isFlipped) ? imageName : (
-		card.isBaseCard() ? base_card_back : standard_card_back
+		card.type === "base" ? base_card_back : standard_card_back
 	)
 	const texture = useLoader(TextureLoader, textureName);
 
@@ -128,7 +123,7 @@ export const Card3DModel: FC<Card3DModelProps> = observer(({ position: propsPosi
 	})
 
 	const cardSize = useMemo(() => {
-		if (card.isBaseCard()) {
+		if (card.type === "base") {
 			return {
 				width: CARD_HEIGHT,
 				height: CARD_WIDTH
@@ -152,7 +147,7 @@ export const Card3DModel: FC<Card3DModelProps> = observer(({ position: propsPosi
 
 
 	const powerIndicator = (() => {
-		if (!card.isMinionCard()) {
+		if (card.type !== "minion") {
 			return null
 		}
 		if (card.position.position !== "base") {

@@ -1,6 +1,7 @@
 import { CardType } from "../data/CardType";
 import { GameCardId, GameState } from "./GameState";
-import { BasePosition, DeckPosition, Position } from "./utils/Position";
+import { BasePosition, Position } from "./position/Position";
+import { DeckPosition } from "./position/PlayerPositions";
 
 export interface GameQuery {
 	cardType?: CardType[]
@@ -20,6 +21,7 @@ export interface GameQuery {
 		}
 	}
 
+	excludedCards?: GameCardId[]
 }
 
 export class GameQueryManager {
@@ -34,6 +36,12 @@ export class GameQueryManager {
 			.filter(card => {
 				if (!query.cardType?.includes(card.type)) {
 					return false
+				}
+
+				if (query.excludedCards) {
+					if (query.excludedCards.includes(card.id)) {
+						return false
+					}
 				}
 
 				if (card.isMinionCard()) {

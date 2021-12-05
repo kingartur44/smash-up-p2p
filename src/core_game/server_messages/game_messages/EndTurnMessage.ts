@@ -1,4 +1,4 @@
-import { PlayerID } from "../game/GameState";
+import { PlayerID } from "../../game/GameState";
 
 export interface EndTurnMessage {
 	type: "end_turn",

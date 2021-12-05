@@ -11,6 +11,8 @@
 	left: 0;
 	top: 17px;
 	z-index: 1;
+	height: calc(100vh - 28px);
+	overflow: hidden;
 }
 
 .card_info {
@@ -20,8 +22,71 @@
 	align-items: center;
 
 	background-color: rgba(155, 155, 155, 0.3);
+
+	overflow: hidden;
 }
 
 .card_info img {
 	width: 90%;
+}
+
+.card_description {
+	height: 30%;
+}
+
+.spacer {
+	flex: 1;
+	background-color: red;
+}
+
+.chat_box {
+	width: 100%;
+	min-height: 20%;
+	max-height: 20%;
+	background-color: rgba(155, 155, 155, 0.3);
+
+	display: flex;
+	flex-direction: column;
+}
+
+.messages_container {
+	overflow-y: scroll;
+	overflow-x: hidden;
+	flex: 1;
+}
+
+.message_author {
+	font-weight: bold;
+	margin-right: 5px;
+}
+
+.message {
+	position: relative
+}
+
+.sentimentEmoji {
+	font-size: x-large;
+	position: absolute;
+	top: -7px;
+	left: 0;
+	opacity: 0;
+
+	animation-name: disappear-to-left;
+	animation-iteration-count: 1;
+	animation-duration: 3s;
+}
+
+@keyframes disappear-to-left {
+	0% {
+		opacity: 1;
+		transform: translateX(0px);	
+	}
+	90% {
+		opacity: 0.7;
+		transform: translateX(20vw);	
+	}
+	100% {
+		opacity: 0.3;
+		transform: translateX(50vw);
+	}
 }

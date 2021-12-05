@@ -4,34 +4,37 @@ import { Bases } from "../database/core_set/core_set"
 import { Faction } from "../database/core_set/Factions"
 import { GameServer } from "../GameServer"
 import { GameCard } from "./cards/GameCard"
-import { fromDatabaseCard, gameCardDeserializer } from "./cards/game_card_utils"
-import { BaseGameCard } from "./cards/BaseGameCard"
+import { fromDatabaseCard } from "./cards/game_card_utils"
 import { GamePlayer } from "./GamePlayer"
-import { Position } from "./utils/Position"
+import { Position } from "./position/Position"
 import { GameQuery, GameQueryManager } from "./GameQueryManager"
 import { ScriptTarget, transpile } from "typescript"
 import { ActionGameCard } from "./cards/ActionGameCard"
 import { MinionGameCard } from "./cards/MinionGameCard"
+import { convertNumberToNumeral } from "./utils/convertNumberToNumeral"
+import { ClientGameAction, ClientGameState } from "../client_game/ClientGameState"
+import { GameCardStack } from "./GameCardStack"
+import { GameEffectsContainer } from "./GameEffectsContainer"
 
 export type PlayerID = number
 export type GameCardId = number
 
 export enum GamePhase {
-	Setup_FactionSelect,
-	Setup_BuildBaseDeck,
-	Setup_PrepareTheMonsterandTreasureDecks,
-	Setup_PreparetheMadnessDeck,
-	Setup_DrawBases,
-	Setup_DrawHands,
+	Setup_FactionSelect = "Setup_FactionSelect",
+	Setup_BuildBaseDeck = "Setup_BuildBaseDeck",
+	Setup_PrepareTheMonsterandTreasureDecks = "Setup_PrepareTheMonsterandTreasureDecks",
+	Setup_PreparetheMadnessDeck = "Setup_PreparetheMadnessDeck",
+	Setup_DrawBases = "Setup_DrawBases",
+	Setup_DrawHands = "Setup_DrawHands",
 
 
-	GameTurn_Start,
-	GameTurn_PlayCards,
-	GameTurn_ScoreBase,
-	GameTurn_Draw,
-	GameTurn_EndTurn,
+	GameTurn_Start = "GameTurn_Start",
+	GameTurn_PlayCards = "GameTurn_PlayCards",
+	GameTurn_ScoreBase = "GameTurn_ScoreBase",
+	GameTurn_Draw = "GameTurn_Draw",
+	GameTurn_EndTurn = "GameTurn_EndTurn",
 
-	ToDo
+	ToDo = "ToDo"
 }
 
 
@@ -51,7 +54,6 @@ export type GameAction = {
 }
 
 
-
 export class GameState {
 	server: GameServer
 	queryManager: GameQueryManager
@@ -62,7 +64,7 @@ export class GameState {
 	currentAction: GameAction
 	
 	activatedEffectQueue: {card_id: GameCardId, effect: string}[]
-	history: {card_id: GameCardId}[]
+	cardEffects: GameEffectsContainer
 
 	cardNextId: GameCardId
 	cards: Record<GameCardId, GameCard>
@@ -70,9 +72,9 @@ export class GameState {
 	players: GamePlayer[]
 	turnPlayerId: PlayerID
 
-	bases_deck: GameCardId[]
-	in_play_bases: GameCardId[]
-	bases_discard_pile: GameCardId[]
+	bases_deck: GameCardStack
+	in_play_bases: GameCardStack
+	bases_discard_pile: GameCardStack
 
 	constructor(server: GameServer) {
 		this.server = server
@@ -95,15 +97,15 @@ export class GameState {
 		]
 		this.turnPlayerId = 0
 
-		this.bases_deck = []
-		this.in_play_bases = []
-		this.bases_discard_pile = []
+		this.bases_deck = new GameCardStack(this)
+		this.in_play_bases = new GameCardStack(this)
+		this.bases_discard_pile = new GameCardStack(this)
 
 		this.haveToInitPhase = true
 		this.phase = GamePhase.Setup_FactionSelect
 
 		this.activatedEffectQueue = []
-		this.history = []
+		this.cardEffects = new GameEffectsContainer(this)
 
 		this.currentAction = observable.object({
 			type: GameCurrentActionType.None
@@ -142,21 +144,21 @@ export class GameState {
 			}
 
 			case GamePhase.Setup_BuildBaseDeck: {
-				const base_0 = this.generateCard(Bases[0]).id
-				const base_1 = this.generateCard(Bases[1]).id
-				const base_2 = this.generateCard(Bases[2]).id
-				const base_3 = this.generateCard(Bases[3]).id
+				const base_0 = this.generateCard(Bases[0])
+				const base_1 = this.generateCard(Bases[1])
+				const base_2 = this.generateCard(Bases[2])
+				const base_3 = this.generateCard(Bases[3])
 
-				this.moveCard(base_0, {
+				base_0.moveCard({
 					position: "bases_deck"
 				})
-				this.moveCard(base_1, {
+				base_1.moveCard({
 					position: "bases_deck"
 				})
-				this.moveCard(base_2, {
+				base_2.moveCard({
 					position: "bases_deck"
 				})
-				this.moveCard(base_3, {
+				base_3.moveCard({
 					position: "bases_deck"
 				})
 
@@ -173,13 +175,13 @@ export class GameState {
 				break
 			}
 			case GamePhase.Setup_DrawBases: {
-				this.moveCard(this.bases_deck[0], {
+				this.bases_deck.getTopCard().moveCard({
 					position: "board"
 				})
-				this.moveCard(this.bases_deck[0], {
+				this.bases_deck.getTopCard().moveCard({
 					position: "board"
 				})
-				this.moveCard(this.bases_deck[0], {
+				this.bases_deck.getTopCard().moveCard({
 					position: "board"
 				})
 
@@ -215,8 +217,7 @@ export class GameState {
 				break
 			}
 			case GamePhase.GameTurn_ScoreBase: {
-				for (const baseID of this.in_play_bases) {
-					const base = this.cards[baseID]
+				for (const base of this.in_play_bases.cards) {
 					if (!base.isBaseCard()) {
 						throw new Error("The base card isn't a base...")
 					}
@@ -225,49 +226,25 @@ export class GameState {
 						for (let i = 0; i < base.databaseCard.points.length; i++) {
 							const runner = runners[i]
 							if (runner !== undefined) {
-								const numeral = (() => {
-									if (i === 0) {
-										return "1st"
-									} else if (i === 1) {
-										return "2nd"
-									} else if (i === 2) {
-										return "3rd"
-									} else {
-										return (i + 1) + "th"
-									}
-								})
 								runner.player.increseVictoryPoints({
 									amount: base.databaseCard.points[i],
-									detail: `You made the ${numeral} place at the base ${base.databaseCard.name}`
+									detail: `You made the ${convertNumberToNumeral(i + 1)} place at the base ${base.databaseCard.name}`
 								})
 							}
 						}
 
-						for (const cardID of base.attached_cards) {
-							const card = this.getCard(cardID)
-							if (card === null) {
-								throw new Error("This card should exist")
-							}
-							if (card.owner_id === null) {
-								throw new Error("The card has no owner")
-							}
-							this.moveCard(cardID, {
-								position: "discard-pile",
-								playerID: card.owner_id
-							})
+						for (const card of base.attached_cards.cards) {
+							card.discardCardAfterBaseScore()
 						}
-						this.moveCard(baseID, {
+						
+						base.moveCard({
 							position: "bases_discard_pile"
 						})
 
-						const newBase = this.getCard(this.bases_deck[0])
-						if (!newBase) {
-							throw new Error("TODO Error: you have to shuffle the deck if it's empty")
-						}
-						this.moveCard(newBase.id, {
+						const newBase = this.bases_deck.getTopCard()
+						newBase.moveCard({
 							position: "board"
 						})
-
 					}
 				}
 
@@ -327,8 +304,12 @@ export class GameState {
 		}
 	}
 
-	getCard(card_id: GameCardId): GameCard | null {
-		return this.cards[card_id]
+	getCard(card_id: GameCardId): GameCard {
+		const card = this.cards[card_id]
+		if (card === undefined) {
+			throw new Error("Logic Error: the card does not exist")
+		}
+		return card
 	}
 
 	async pickTarget(query: GameQuery, prompt: string, canSelectNull: boolean): Promise<GameCard | null> {
@@ -377,7 +358,7 @@ export class GameState {
 		if (card.position.position === "hand") {
 			if (newPosition.position === "base") {
 				this.players[playerID].minionPlays -= 1
-				this.moveCard(card.id, newPosition)
+				card.moveCard(newPosition)
 				card.onPlay()
 			}
 		}
@@ -395,14 +376,14 @@ export class GameState {
 		if (card.position.position === "hand") {
 			this.players[playerID].actionPlays--
 
-			this.moveCard(card.id, {
+			card.moveCard({
 				position: "is-about-to-be-played",
 				playerID: card.owner_id
 			})
 
 			await card.onPlay()
 
-			this.moveCard(card.id, {
+			card.moveCard({
 				position: "discard-pile",
 				playerID: card.owner_id
 			})
@@ -411,9 +392,6 @@ export class GameState {
 
 	playCard(card_id: number, playerID: PlayerID, newPosition?: Position) {
 		const card = this.getCard(card_id)
-		if (card === null) {
-			throw new Error("The card does not exist")
-		}
 		if (card.isMinionCard()) {
 			if (newPosition === undefined) {
 				throw new Error("[newPosition] is undefined")
@@ -428,181 +406,78 @@ export class GameState {
 		}
 	}
 
-	removeCardFromItsPosition(cardID: number) {
-		const gameCard = this.cards[cardID]
-		const position = gameCard.position
-		switch (position.position) {
-			case "hand": {
-				this.players[position.playerID].hand = this.players[position.playerID].hand.filter(cardID => cardID !== gameCard.id)
-				break
-			}
-			case "deck": {
-				this.players[position.playerID].deck = this.players[position.playerID].deck.filter(cardID => cardID !== gameCard.id)
-				break
-			}
-			case "is-about-to-be-played": {
-				this.players[position.playerID].aboutToBePlayedCards = this.players[position.playerID].aboutToBePlayedCards.filter(cardID => cardID !== gameCard.id)
-				break
-			}
-			case "discard-pile": {
-				this.players[position.playerID].discardPile = this.players[position.playerID].discardPile.filter(cardID => cardID !== gameCard.id)
-				break
-			}
-			case "base": {
-				const base = this.getCard(position.base_id) as BaseGameCard | null
-				if (base === null) {
-					throw new Error(`The card [${position.base_id}] does not exist`)
-				}
+	
 
-				base.attached_cards = base.attached_cards.filter(cardID => cardID !== gameCard.id)
-				break
-			}
-			case "bases_discard_pile": {
-				this.bases_discard_pile = this.bases_discard_pile.filter(cardID => cardID !== gameCard.id)
-				break
-			}
-			case "bases_deck": {
-				this.bases_deck = this.bases_deck.filter(cardID => cardID !== gameCard.id)
-				break
-			}
-			case "board": {
-				this.in_play_bases = this.in_play_bases.filter(cardID => cardID !== gameCard.id)
-				break
-			}
-			case "no-position": {
-				break
-			}
-			default: {
-				throw new Error(`Position [${JSON.stringify(position)}] not implemented`)
-			}
-		}
-		gameCard.position = {
-			position: "no-position"
-		}
-	}
+	// serialize(): string {
+	// 	return JSON.stringify({
+	// 		players: this.players.map(player => player.serialize()),
+	// 		phase: this.phase,
+	// 		currentAction: this.currentAction,
+	// 		activatedEffectQueue: this.activatedEffectQueue,
+	// 		bases: this.in_play_bases,
+	// 		bases_deck: this.bases_deck,
+	// 		cards: Object.fromEntries(Object.entries(this.cards).map(([cardId, card]) => {
+	// 			return [cardId, card.serialize()]
+	// 		})),
+	// 		turnPlayer: this.turnPlayerId
+	// 	})
+	// }
 
-	moveCard(cardID: number, newPosition: Position) {
-		this.removeCardFromItsPosition(cardID)
-		
-		const card = this.getCard(cardID)
+	// deserialize(input: string) {
+	// 	const data = JSON.parse(input)
+	// 	data.players.forEach((player: any, index: number) => this.players[index].deserialize(player))
+	// 	this.phase = data.phase
+	// 	this.currentAction = data.currentAction
+	// 	this.activatedEffectQueue = data.activatedEffectQueue
+	// 	this.in_play_bases = data.bases
+	// 	this.bases_deck = data.bases_deck
+	// 	this.cards = Object.fromEntries(Object.entries(data.cards).map(([cardId, card]) => {
+	// 		return [cardId, gameCardDeserializer({
+	// 			gameState: this,
+	// 			input: card
+	// 		})]
+	// 	}))
+	// 	this.turnPlayerId = data.turnPlayer
+	// }
 
-		if (!card) {
-			throw new Error(`The card [${cardID}] does not exist`)
-		}
-
-		switch (newPosition.position) {
-			case "base": {
-				const base = this.getCard(newPosition.base_id) as BaseGameCard | null
-				if (base === null) {
-					throw new Error(`The card [${newPosition.base_id}] does not exist`)
-				}
-
-				base.attached_cards.push(cardID)
-				card.position = {
-					...newPosition,
-					index: base.attached_cards.length - 1
-				}
-				break
-			}
-			case "hand": {
-				const player = this.players[newPosition.playerID] as GamePlayer | undefined
-				if (player === undefined) {
-					throw new Error(`The player [${newPosition.playerID}] does not exist`)
-				}
-
-				player.hand.push(cardID)
-				card.position = newPosition
-				break
-			}
-			case "is-about-to-be-played": {
-				const player = this.players[newPosition.playerID] as GamePlayer | undefined
-				if (player === undefined) {
-					throw new Error(`The player [${newPosition.playerID}] does not exist`)
-				}
-
-				player.aboutToBePlayedCards.push(cardID)
-				card.position = newPosition
-				break
-			}
-			case "discard-pile": {
-				const player = this.players[newPosition.playerID] as GamePlayer | undefined
-				if (player === undefined) {
-					throw new Error(`The player [${newPosition.playerID}] does not exist`)
-				}
-
-				player.discardPile.push(cardID)
-				card.position = newPosition
-				break
-			}
-			case "deck": {
-				const player = this.players[newPosition.playerID] as GamePlayer | undefined
-				if (player === undefined) {
-					throw new Error(`The player [${newPosition.playerID}] does not exist`)
-				}
-
-				player.deck.push(cardID)
-				card.position = {
-					...newPosition,
-					index: player.deck.length - 1
-				}
-				break
-			}
-			case "board": {
-				if (!card.isBaseCard()) {
-					throw new Error("Trying to move a non-base card on the board")
-				}
-				this.in_play_bases.push(cardID)
-				card.position = newPosition
-				break
-			}
-			case "bases_deck": {
-				if (!card.isBaseCard()) {
-					throw new Error("Trying to move a non-base card in the bases deck")
-				}
-				this.bases_deck.push(cardID)
-				card.position = newPosition
-				break
-			}
-			case "bases_discard_pile": {
-				if (!card.isBaseCard()) {
-					throw new Error("Trying to move a non-base card in the bases deck")
-				}
-				this.bases_discard_pile.push(cardID)
-				card.position = newPosition
-				break
-			}
-		}
-	}
-
-	serialize(): string {
-		return JSON.stringify({
-			players: this.players.map(player => player.serialize()),
+	toClientGameState(): ClientGameState {
+		return {
+			players: this.players.map(player => player.toClientGamePlayer()),
+			turnPlayerId: this.turnPlayerId,
 			phase: this.phase,
-			currentAction: this.currentAction,
-			activatedEffectQueue: this.activatedEffectQueue,
-			bases: this.in_play_bases,
-			bases_deck: this.bases_deck,
-			cards: Object.fromEntries(Object.entries(this.cards).map(([cardId, card]) => {
-				return [cardId, card.serialize()]
-			})),
-			turnPlayer: this.turnPlayerId
-		})
-	}
 
-	deserialize(input: string) {
-		const data = JSON.parse(input)
-		data.players.forEach((player: any, index: number) => this.players[index].deserialize(player))
-		this.phase = data.phase
-		this.currentAction = data.currentAction
-		this.activatedEffectQueue = data.activatedEffectQueue
-		this.in_play_bases = data.bases
-		this.bases_deck = data.bases_deck
-		this.cards = Object.fromEntries(Object.entries(data.cards).map(([cardId, card]) => {
-			return [cardId, gameCardDeserializer({
-				gameState: this,
-				input: card
-			})]
-		}))
-		this.turnPlayerId = data.turnPlayer
+			currentAction: (() => {
+				let clientCurrentAction: ClientGameAction
+				switch (this.currentAction.type) {
+					case GameCurrentActionType.None: {
+						clientCurrentAction = {
+							type: "None"
+						}
+						break
+					}
+					case GameCurrentActionType.ChooseTarget: {
+						clientCurrentAction = {
+							type: "ChooseTarget",
+							possibleTargets: this.currentAction.possibleTargets,
+							prompt: this.currentAction.prompt,
+							canSelectNull: this.currentAction.canSelectNull
+						}
+						break
+					}
+					default:
+						throw new Error("CurrentAction non supportata")
+				}
+				return clientCurrentAction
+			})(),
+
+			cards: Object.fromEntries(
+				Object.entries(this.cards)
+					.map(([key, value]) => [key, value.toClientGameCardArray()])
+			),
+
+			bases_deck: this.bases_deck.toClientGameCardArray(),
+			bases_discard_pile: this.bases_discard_pile.toClientGameCardArray(),
+			in_play_bases: this.in_play_bases.toClientGameCardArray()
+		}
 	}
 }
