@@ -1,7 +1,6 @@
 import { CardType } from "../data/CardType";
-import { GameCardId, GameState } from "./GameState";
-import { BasePosition, Position } from "./position/Position";
-import { DeckPosition } from "./position/PlayerPositions";
+import { GameCardId, GameState, PlayerID } from "./GameState";
+import { BasePosition, FIELD_POSITIONS, HandPosition, Position, PositionType } from "./position/Position";
 
 export interface GameQuery {
 	cardType?: CardType[]
@@ -11,6 +10,7 @@ export interface GameQuery {
 			operator: "=" | "!="
 			value: string
 		}
+		controller_id?: (PlayerID | null)[]
 		position?: (Position | "on-the-board")[]
 	}
 
@@ -22,6 +22,7 @@ export interface GameQuery {
 	}
 
 	excludedCards?: GameCardId[]
+	includedCards?: GameCardId[]
 }
 
 export class GameQueryManager {
@@ -36,6 +37,12 @@ export class GameQueryManager {
 			.filter(card => {
 				if (!query.cardType?.includes(card.type)) {
 					return false
+				}
+
+				if (query.includedCards) {
+					if (query.includedCards.includes(card.id)) {
+						return true
+					}
 				}
 
 				if (query.excludedCards) {
@@ -88,24 +95,30 @@ export class GameQueryManager {
 				if (query.filters?.position) {
 					const positionQueryResult = query.filters?.position.some(position => {
 						if (position === "on-the-board") {
-							return ["board", "base"].includes(card.position.position)
+							return FIELD_POSITIONS.includes(card.position.positionType)
 						}
-						if (card.position.position !== position.position) {
+						if (card.position.positionType !== position.positionType) {
 							return false
 						}
-						switch (position.position) {
-							case "board":
-							case "no-position":
+						switch (position.positionType) {
+							case PositionType.Board:
+							case PositionType.NoPosition:
 								return true
-							case "base":
+							case PositionType.Base:
 								return position.base_id === (card.position as BasePosition).base_id
-							case "deck":
-							case "hand":
-								return position.playerID === (card.position as DeckPosition).playerID
+							case PositionType.Deck:
+							case PositionType.Hand:
+								return position.playerID === (card.position as HandPosition).playerID
 						}
 						throw new Error("Attenzione, posizione sconosciuta")
 					})
 					if (!positionQueryResult) {
+						return false
+					}
+				}
+
+				if (query.filters?.controller_id) {
+					if (!query.filters.controller_id.includes(card.controller_id!)) {
 						return false
 					}
 				}

@@ -86,7 +86,7 @@ export class GameServer {
 			if (currentAction.type !== GameCurrentActionType.ChooseTarget) {
 				throw new Error("The current action isn't 'ChooseTarget'")
 			}
-			currentAction.sendTargetCallback(message.cardId)
+			this.gameState.sendTargetCallback(message.playerID, message.cardId)
 			return	
 		}
 

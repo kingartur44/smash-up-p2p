@@ -1,3 +1,4 @@
+import { PositionType } from "../core_game/game/position/Position"
 import { useGameScreenContext } from "../GameScreenContext"
 import { Card3DModelProps } from "./Card3DModel"
 import { usePositions } from "./usePositions"
@@ -12,8 +13,8 @@ export function useCards(): Card3DModelProps[] {
 
 	for (const card of Object.values(clientGameState.cards)) {
 		const position = card.position
-		switch (position.position) {
-			case "hand": {
+		switch (position.positionType) {
+			case PositionType.Hand: {
 				const isClientOwnerHand = gameServer.playerID === position.playerID
 				
 				const cardPR = positions.getCardHandPosition(card, position)
@@ -28,7 +29,7 @@ export function useCards(): Card3DModelProps[] {
 				break
 			}
 
-			case "deck": {
+			case PositionType.Deck: {
 				const cardPR = positions.getCardDeckPosition(
 					card,
 					position
@@ -45,7 +46,7 @@ export function useCards(): Card3DModelProps[] {
 				break
 			}
 
-			case "discard-pile": {
+			case PositionType.DiscardPile: {
 				const cardPR = positions.getCardDiscardPilePosition(card, position)
 				
 				cardPrototypes.push({
@@ -58,7 +59,7 @@ export function useCards(): Card3DModelProps[] {
 				break
 			}
 
-			case "board": {
+			case PositionType.Board: {
 				const cardPR = positions.getBasePosition(card)
 
 				cardPrototypes.push({
@@ -71,7 +72,7 @@ export function useCards(): Card3DModelProps[] {
 				break
 			}
 
-			case "bases_deck": {
+			case PositionType.BasesDeck: {
 				const cardPR = positions.getBasesDeckPosition(card)
 
 				cardPrototypes.push({
@@ -85,7 +86,7 @@ export function useCards(): Card3DModelProps[] {
 				break
 			}
 
-			case "is-about-to-be-played": {
+			case PositionType.isAboutToBePlayed: {
 				const cardPR = positions.getAboutToBePlayedPosition(card, position)
 
 				cardPrototypes.push({
@@ -99,7 +100,7 @@ export function useCards(): Card3DModelProps[] {
 				break
 			}
 
-			case "base": {
+			case PositionType.Base: {
 
 				const cardPR = positions.getCardOnBasePosition(card, position)
 

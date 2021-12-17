@@ -6,6 +6,7 @@ import { GameCard } from "./GameCard";
 import { GamePlayer } from "../GamePlayer";
 import { CardType } from "../../data/CardType";
 import { GameCardStack } from "../GameCardStack";
+import { ReduceBreakpoint } from "./GameCardState";
 
 
 export class BaseGameCard extends GameCard {
@@ -38,7 +39,6 @@ export class BaseGameCard extends GameCard {
 			owner: computed,
 			controller: computed,
 
-			returnToOwnerHand: action,
 			initializeEffects: action,
 			registerEffect: action,
 
@@ -74,7 +74,16 @@ export class BaseGameCard extends GameCard {
 
 
 	get breakpoint(): number {
-		return this.databaseCard.breakpoint;
+		let cardBreakPoint = this.databaseCard.breakpoint;
+
+		for (const state of this.queryStates<ReduceBreakpoint>("reduce-breakpoint")) {
+			const value = typeof state.value === "number"
+				? state.value
+				: state.value(this, this.gameState)
+			cardBreakPoint -= value
+		}
+
+		return cardBreakPoint;
 	}
 
 	get totalPowerOnBase(): number {
@@ -138,29 +147,5 @@ export class BaseGameCard extends GameCard {
 		card.database_card_id = databaseCard.id;
 		card.initializeEffects()
 		return card;
-	}
-
-	serialize(): any {
-		return {
-			id: this.id,
-			effects: this.effects,
-			owner_id: this.owner_id,
-			controller_id: this.controller_id,
-			type: this.type,
-			position: this.position,
-			database_card_id: this.database_card_id,
-			attached_cards: this.attached_cards
-		};
-	}
-
-	deserialize(input: any) {
-		this.id = input.id;
-		this.effects = input.effects;
-		this.owner_id = input.owner_id;
-		this.controller_id = input.controller_id;
-		this.type = input.type;
-		this.position = input.position;
-		this.database_card_id = input.database_card_id;
-		this.attached_cards = input.attached_cards;
 	}
 }

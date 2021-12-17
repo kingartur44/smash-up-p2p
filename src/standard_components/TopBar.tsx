@@ -7,6 +7,7 @@ export const TopBar = observer(() => {
 	const { clientGameState } = useGameScreenContext()
 
 	return <div className={classes.top_bar}>
+		<div>{clientGameState.phase} - {clientGameState.phaseStep}</div>
 		{clientGameState.players.map((player, index) => {
 			return <div className={classes.player_detail} key={index}>
 				{player.name} - {player.victoryPoints} VP

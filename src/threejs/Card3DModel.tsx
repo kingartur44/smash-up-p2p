@@ -1,6 +1,6 @@
 import { FC, useMemo, useState } from 'react';
 import { useLoader, Vector3 } from '@react-three/fiber';
-import { Text } from '@react-three/drei';
+import { Html, Text } from '@react-three/drei';
 import { DoubleSide, Euler, Shape, TextureLoader } from 'three';
 import { observer } from 'mobx-react-lite';
 import { useGameScreenContext } from '../GameScreenContext';
@@ -11,6 +11,7 @@ import { drawRectFromCenter } from './Table';
 import standard_card_back from "../assets/standard_card_back.png";
 import base_card_back from "../assets/base_card_back.png"
 import { ClientGameCard } from '../core_game/client_game/ClientGameState';
+import { PositionType } from '../core_game/game/position/Position';
 
 
 function useGameCard(card: ClientGameCard) {
@@ -45,24 +46,32 @@ function useGameCard(card: ClientGameCard) {
 
 	const onCardAction = () => {
 		if (clientGameState.currentAction.type === "ChooseTarget") {
+			if (clientGameState.currentAction.playerID === gameServer.playerID) {
+				gameServer.sendServerMessage({
+					type: "pick_target",
+					cardId: card.id,
+					playerID: gameServer.playerID,
+				})
+			}
+		} else if (selectedCard === card.id && card.type === "action") {
 			gameServer.sendServerMessage({
-				type: "pick_target",
-				cardId: card.id,
+				type: "play_card",
 				playerID: gameServer.playerID,
+				card_id: selectedCard
 			})
-		} else if (card.position.position === "hand") {
+		} else if (card.position.positionType === PositionType.Hand) {
 			if (!isPlayable) {
 				return
 			}
 			setSelectedCard(card.id)
 		} else if (isATargetCard) {
-			if (selectedCard) {
+			if (selectedCard !== null) {
 				gameServer.sendServerMessage({
 					type: "play_card",
 					playerID: gameServer.playerID,
 					card_id: selectedCard,
 					position: {
-						position: "base",
+						positionType: PositionType.Base,
 						base_id: card.id
 					}
 				})
@@ -145,12 +154,11 @@ export const Card3DModel: FC<Card3DModelProps> = observer(({ position: propsPosi
 		return undefined
 	})()
 
-
 	const powerIndicator = (() => {
 		if (card.type !== "minion") {
 			return null
 		}
-		if (card.position.position !== "base") {
+		if (card.position.positionType !== PositionType.Base) {
 			return null
 		}
 
@@ -165,12 +173,15 @@ export const Card3DModel: FC<Card3DModelProps> = observer(({ position: propsPosi
 		</Text>
 	})()
 
-
 	const outlineShape = useMemo(() => {
 		const shape = new Shape()
 		drawRectFromCenter({shape, centerX: 0, centerY: 0, width: cardSize.width, height: cardSize.height})
 		return shape
 	}, [cardSize])
+
+	const showActionPlayButton = (() => {
+		return isSelected && isPlayable && card.type === "action"
+	})()
 
 	return <animated.group position={position as any} rotation={rotation} scale={isHovered ? 1.05 : 1}>
 		<mesh onPointerOver={event => {
@@ -197,5 +208,15 @@ export const Card3DModel: FC<Card3DModelProps> = observer(({ position: propsPosi
 		</line>}
 
 		{powerIndicator}
+
+		{showActionPlayButton && <>
+			<Html transform sprite
+				position={[0, cardSize.height / 2, 0]}
+			>
+				<button onClick={onCardAction} style={{transform:"translateY(-66%)", fontSize: "xx-small"}}>
+					Play
+				</button>
+			</Html>
+		</>}
 	</animated.group>
 })

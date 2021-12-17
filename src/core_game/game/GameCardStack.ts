@@ -2,6 +2,7 @@ import { makeAutoObservable } from "mobx";
 import { ClientGameCard } from "../client_game/ClientGameState";
 import { GameCard } from "./cards/GameCard";
 import { GameCardId, GameState } from "./GameState";
+import { PositionType } from "./position/Position";
 import { shuffleArray } from "./utils/shuffleArray";
 
 export class GameCardStack {
@@ -31,12 +32,16 @@ export class GameCardStack {
 	empty() {
 		for (const card of this.cards) {
 			card.moveCard({
-				position: "no-position"
+				positionType: PositionType.NoPosition
 			})
 		}
 	}
 
-	addCard(card: GameCard) {
+	addToTop(card: GameCard) {
+		this.content.unshift(card.id)
+	}
+
+	addToBottom(card: GameCard) {
 		this.content.push(card.id)
 	}
 

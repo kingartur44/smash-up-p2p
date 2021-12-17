@@ -6,7 +6,7 @@ import { GameServer } from "../GameServer"
 import { GameCard } from "./cards/GameCard"
 import { fromDatabaseCard } from "./cards/game_card_utils"
 import { GamePlayer } from "./GamePlayer"
-import { Position } from "./position/Position"
+import { Position, PositionType } from "./position/Position"
 import { GameQuery, GameQueryManager } from "./GameQueryManager"
 import { ScriptTarget, transpile } from "typescript"
 import { ActionGameCard } from "./cards/ActionGameCard"
@@ -14,7 +14,7 @@ import { MinionGameCard } from "./cards/MinionGameCard"
 import { convertNumberToNumeral } from "./utils/convertNumberToNumeral"
 import { ClientGameAction, ClientGameState } from "../client_game/ClientGameState"
 import { GameCardStack } from "./GameCardStack"
-import { GameEffectsContainer } from "./GameEffectsContainer"
+import assert from "assert"
 
 export type PlayerID = number
 export type GameCardId = number
@@ -47,6 +47,7 @@ export type GameAction = {
 	type: GameCurrentActionType.None
 } | {
 	type: GameCurrentActionType.ChooseTarget,
+	playerID: PlayerID
 	possibleTargets: GameCardId[]
 	prompt: string
 	canSelectNull: boolean
@@ -58,17 +59,19 @@ export class GameState {
 	server: GameServer
 	queryManager: GameQueryManager
 
-	haveToInitPhase: boolean
+	haveToInitPhaseStep: boolean
 	phase: GamePhase
+	phaseStep: "start" | "process" | "end"
+	nextPhase: GamePhase | undefined
 
 	currentAction: GameAction
 	
 	activatedEffectQueue: {card_id: GameCardId, effect: string}[]
-	cardEffects: GameEffectsContainer
 
 	cardNextId: GameCardId
 	cards: Record<GameCardId, GameCard>
 
+	turnCounter: number
 	players: GamePlayer[]
 	turnPlayerId: PlayerID
 
@@ -85,6 +88,7 @@ export class GameState {
 			deep: true
 		})
 
+		this.turnCounter = 1
 		this.players = [
 			new GamePlayer({
 				gameState: this,
@@ -101,11 +105,12 @@ export class GameState {
 		this.in_play_bases = new GameCardStack(this)
 		this.bases_discard_pile = new GameCardStack(this)
 
-		this.haveToInitPhase = true
+		this.haveToInitPhaseStep = true
 		this.phase = GamePhase.Setup_FactionSelect
+		this.phaseStep = "start"
+		this.nextPhase = undefined
 
 		this.activatedEffectQueue = []
-		this.cardEffects = new GameEffectsContainer(this)
 
 		this.currentAction = observable.object({
 			type: GameCurrentActionType.None
@@ -126,8 +131,44 @@ export class GameState {
 				}))
 				callback(card, this)
 			}
+
+			return
 		}
 
+		if (this.currentAction.type !== GameCurrentActionType.None) {
+			return
+		}
+
+		if (this.phaseStep === "start" || this.phaseStep === "end") {
+			if (this.haveToInitPhaseStep) {
+				this.haveToInitPhaseStep = false
+				for (const card of Object.values(this.cards)) {
+					card.updateCardStates({
+						timing: this.phaseStep,
+						gamePhase: this.phase,
+						turnPlayer: this.turnPlayerId
+					})
+				}
+				// Velocizziamo il processo nel caso in cui nessun effetto è stato attivato
+				if (this.activatedEffectQueue.length > 0) {
+					return
+				}
+			}
+			if (this.phaseStep === "start") {
+				this.setPhaseStep("process")
+				return
+			}
+			if (this.phaseStep === "end") {
+				this.setPhaseStep("start")
+				assert(this.nextPhase !== undefined, "Logic Error: Non c'è una prossima fase")
+
+				this.phase = this.nextPhase
+				this.nextPhase = undefined
+				return
+			}
+		}
+
+		
 		switch (this.phase) {
 			case GamePhase.Setup_FactionSelect: {
 				this.players[0].setFactions([Faction.Aliens])
@@ -150,17 +191,19 @@ export class GameState {
 				const base_3 = this.generateCard(Bases[3])
 
 				base_0.moveCard({
-					position: "bases_deck"
+					positionType: PositionType.BasesDeck
 				})
 				base_1.moveCard({
-					position: "bases_deck"
+					positionType: PositionType.BasesDeck
 				})
 				base_2.moveCard({
-					position: "bases_deck"
+					positionType: PositionType.BasesDeck
 				})
 				base_3.moveCard({
-					position: "bases_deck"
+					positionType: PositionType.BasesDeck
 				})
+
+				this.bases_deck.shuffle()
 
 				this.setPhase(GamePhase.Setup_PrepareTheMonsterandTreasureDecks)
 				break
@@ -176,13 +219,13 @@ export class GameState {
 			}
 			case GamePhase.Setup_DrawBases: {
 				this.bases_deck.getTopCard().moveCard({
-					position: "board"
+					positionType: PositionType.Board
 				})
 				this.bases_deck.getTopCard().moveCard({
-					position: "board"
+					positionType: PositionType.Board
 				})
 				this.bases_deck.getTopCard().moveCard({
-					position: "board"
+					positionType: PositionType.Board
 				})
 
 				this.setPhase(GamePhase.Setup_DrawHands)
@@ -201,7 +244,7 @@ export class GameState {
 				break
 			}
 			case GamePhase.GameTurn_PlayCards: {
-				if (this.haveToInitPhase) {
+				if (this.haveToInitPhaseStep) {
 					for (const player of this.players) {
 						if (player.id === this.turnPlayerId) {
 							player.minionPlays = 1;
@@ -212,7 +255,7 @@ export class GameState {
 						}
 					}
 					
-					this.haveToInitPhase = false
+					this.haveToInitPhaseStep = false
 				}
 				break
 			}
@@ -238,12 +281,12 @@ export class GameState {
 						}
 						
 						base.moveCard({
-							position: "bases_discard_pile"
+							positionType: PositionType.basesDiscardPile
 						})
 
 						const newBase = this.bases_deck.getTopCard()
 						newBase.moveCard({
-							position: "board"
+							positionType: PositionType.Board
 						})
 					}
 				}
@@ -257,10 +300,14 @@ export class GameState {
 				break
 			}
 			case GamePhase.GameTurn_EndTurn: {
-				this.turnPlayerId++
-				if (this.turnPlayerId === 2) {
+				this.turnCounter += 1
+
+				// We calculate the next player turn
+				this.turnPlayerId += 1
+				if (this.turnPlayerId === this.players.length) {
 					this.turnPlayerId = 0
 				}
+
 				this.setPhase(GamePhase.GameTurn_PlayCards)
 				break
 			}
@@ -270,9 +317,20 @@ export class GameState {
 		}
 	}
 
-	setPhase(phase: GamePhase) {
-		this.phase = phase
-		this.haveToInitPhase = true
+	setPhase(newPhase: GamePhase) {
+		if (newPhase === this.phase) {
+			throw new Error("Logic Error: this phase is not different from the previous one")
+		}
+		this.setPhaseStep("end")
+		this.nextPhase = newPhase
+	}
+
+	setPhaseStep(newPhaseStep: "start" | "process" | "end") {
+		if (newPhaseStep === this.phaseStep) {
+			throw new Error("Logic Error: this step is not different from the previous one")
+		}
+		this.haveToInitPhaseStep = true
+		this.phaseStep = newPhaseStep
 	}
 
 	generateCard(databaseCard: DatabaseCard): GameCard {
@@ -312,7 +370,7 @@ export class GameState {
 		return card
 	}
 
-	async pickTarget(query: GameQuery, prompt: string, canSelectNull: boolean): Promise<GameCard | null> {
+	async pickTarget<T extends GameCard>(playerID: PlayerID, query: GameQuery, prompt: string, canSelectNull: boolean): Promise<T | null> {
 		const possibleTargets = this.queryManager.executeQuery(query)
 		if (possibleTargets.length === 0) {
 			return null
@@ -321,6 +379,7 @@ export class GameState {
 		return new Promise(resolve => {
 			this.currentAction = {
 				type: GameCurrentActionType.ChooseTarget,
+				playerID: playerID,
 				prompt: prompt,
 				canSelectNull: canSelectNull,
 				sendTargetCallback: (card_id) => {
@@ -334,7 +393,7 @@ export class GameState {
 						return
 					}
 					if (possibleTargets.includes(card_id)) {
-						resolve(this.getCard(card_id))
+						resolve(this.getCard(card_id) as T)
 						this.currentAction = {
 							type: GameCurrentActionType.None
 						}
@@ -343,6 +402,17 @@ export class GameState {
 				possibleTargets: possibleTargets
 			}
 		})
+	}
+
+	sendTargetCallback(playerID: number, cardId: number | null) {
+		if (this.currentAction.type !== GameCurrentActionType.ChooseTarget) {
+			throw new Error("Wrong timing for the message")
+		}
+		if (this.currentAction.playerID !== playerID) {
+			throw new Error("This player is not the one who have to perform this action")
+		}
+
+		this.currentAction.sendTargetCallback(cardId)
 	}
 
 	addEffectToQueue(card_id: number, effect: string) {
@@ -355,8 +425,8 @@ export class GameState {
 		}
 	
 		
-		if (card.position.position === "hand") {
-			if (newPosition.position === "base") {
+		if (card.position.positionType === PositionType.Hand) {
+			if (newPosition.positionType === PositionType.Base) {
 				this.players[playerID].minionPlays -= 1
 				card.moveCard(newPosition)
 				card.onPlay()
@@ -373,18 +443,18 @@ export class GameState {
 			throw new Error("We need an owner to know the discard pile where to send the card")
 		}
 
-		if (card.position.position === "hand") {
+		if (card.position.positionType === PositionType.Hand) {
 			this.players[playerID].actionPlays--
 
 			card.moveCard({
-				position: "is-about-to-be-played",
+				positionType: PositionType.isAboutToBePlayed,
 				playerID: card.owner_id
 			})
 
 			await card.onPlay()
 
 			card.moveCard({
-				position: "discard-pile",
+				positionType: PositionType.DiscardPile,
 				playerID: card.owner_id
 			})
 		}
@@ -406,45 +476,13 @@ export class GameState {
 		}
 	}
 
-	
-
-	// serialize(): string {
-	// 	return JSON.stringify({
-	// 		players: this.players.map(player => player.serialize()),
-	// 		phase: this.phase,
-	// 		currentAction: this.currentAction,
-	// 		activatedEffectQueue: this.activatedEffectQueue,
-	// 		bases: this.in_play_bases,
-	// 		bases_deck: this.bases_deck,
-	// 		cards: Object.fromEntries(Object.entries(this.cards).map(([cardId, card]) => {
-	// 			return [cardId, card.serialize()]
-	// 		})),
-	// 		turnPlayer: this.turnPlayerId
-	// 	})
-	// }
-
-	// deserialize(input: string) {
-	// 	const data = JSON.parse(input)
-	// 	data.players.forEach((player: any, index: number) => this.players[index].deserialize(player))
-	// 	this.phase = data.phase
-	// 	this.currentAction = data.currentAction
-	// 	this.activatedEffectQueue = data.activatedEffectQueue
-	// 	this.in_play_bases = data.bases
-	// 	this.bases_deck = data.bases_deck
-	// 	this.cards = Object.fromEntries(Object.entries(data.cards).map(([cardId, card]) => {
-	// 		return [cardId, gameCardDeserializer({
-	// 			gameState: this,
-	// 			input: card
-	// 		})]
-	// 	}))
-	// 	this.turnPlayerId = data.turnPlayer
-	// }
 
 	toClientGameState(): ClientGameState {
 		return {
 			players: this.players.map(player => player.toClientGamePlayer()),
 			turnPlayerId: this.turnPlayerId,
 			phase: this.phase,
+			phaseStep: this.phaseStep,
 
 			currentAction: (() => {
 				let clientCurrentAction: ClientGameAction
@@ -458,6 +496,7 @@ export class GameState {
 					case GameCurrentActionType.ChooseTarget: {
 						clientCurrentAction = {
 							type: "ChooseTarget",
+							playerID: this.currentAction.playerID,
 							possibleTargets: this.currentAction.possibleTargets,
 							prompt: this.currentAction.prompt,
 							canSelectNull: this.currentAction.canSelectNull

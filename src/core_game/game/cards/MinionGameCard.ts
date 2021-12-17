@@ -5,7 +5,8 @@ import { GameCurrentActionType, GamePhase, GameState } from "../GameState";
 import { CardType } from "../../data/CardType";
 import { GameCard } from "./GameCard";
 import { BaseGameCard } from "./BaseGameCard";
-import { PowerBoostEffect } from "./CardEffects";
+import { PositionType } from "../position/Position";
+import { PowerBoost } from "./GameCardState";
 
 
 export class MinionGameCard extends GameCard {
@@ -34,7 +35,6 @@ export class MinionGameCard extends GameCard {
 			owner: computed,
 			controller: computed,
 
-			returnToOwnerHand: action,
 			initializeEffects: action,
 			registerEffect: action,
 
@@ -49,11 +49,15 @@ export class MinionGameCard extends GameCard {
 
 	
 	get power() {
-		let cardPower = this.databaseCard.power
-		this.queryEffects<PowerBoostEffect>("power-boost")
-			.forEach(effect => {
-				cardPower += effect.callback(this, this.gameState)
-			})
+		let cardPower = this.databaseCard.power;
+
+		for (const state of this.queryStates<PowerBoost>("power-boost")) {
+			const value = typeof state.value === "number"
+				? state.value
+				: state.value(this, this.gameState)
+			cardPower += value
+		}
+
 		return cardPower
 	}
 
@@ -69,7 +73,7 @@ export class MinionGameCard extends GameCard {
 
 
 	get isPlayable(): boolean {
-		if (this.position.position === "hand") {
+		if (this.position.positionType === PositionType.Hand) {
 			if (this.targets.length > 0) {
 				if (this.position.playerID === this.gameState.turnPlayerId) {
 					if (this.gameState.turnPlayer.minionPlays > 0) {
@@ -87,7 +91,7 @@ export class MinionGameCard extends GameCard {
 	}
 	
 	get card_current_base(): BaseGameCard | undefined {
-		if (this.position.position !== "base") {
+		if (this.position.positionType !== PositionType.Base) {
 			return undefined
 		}
 		const base = this.gameState.getCard(this.position.base_id)
@@ -103,27 +107,5 @@ export class MinionGameCard extends GameCard {
 		card.database_card_id = databaseCard.id;
 		card.initializeEffects()
 		return card;
-	}
-
-	serialize(): any {
-		return {
-			id: this.id,
-			effects: this.effects,
-			owner_id: this.owner_id,
-			controller_id: this.controller_id,
-			type: this.type,
-			position: this.position,
-			database_card_id: this.database_card_id
-		};
-	}
-
-	deserialize(input: any) {
-		this.id = input.id;
-		this.effects = input.effects;
-		this.owner_id = input.owner_id;
-		this.controller_id = input.controller_id;
-		this.type = input.type;
-		this.position = input.position;
-		this.database_card_id = input.database_card_id;
 	}
 }

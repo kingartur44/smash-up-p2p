@@ -51,11 +51,13 @@ type DatabaseCardPrototypes = MinionDatabaseCardPrototype | ActionDatabaseCardPr
 interface GenerateSetOutput {
 	cards: Record<string, DatabaseCard>
 	deck: DatabaseCard[]
+	bases_deck: DatabaseCard[]
 }
 
 export function generateSet(faction: Faction, prototypes: DatabaseCardPrototypes[]): GenerateSetOutput {
 	const cards: Record<string, DatabaseCard> = {}
 	const deck: DatabaseCard[] = []
+	const bases_deck: DatabaseCard[] = []
 
 	let counter = 0
 	for (const prototype of prototypes) {
@@ -102,12 +104,17 @@ export function generateSet(faction: Faction, prototypes: DatabaseCardPrototypes
 
 		cards[card_id] = card
 		for (let i = 0; i < prototype.quantityInDeck; i++) {
-			deck.push(card)
+			if (card.type === CardType.Base) {
+				bases_deck.push(card)
+			} else {
+				deck.push(card)
+			}			
 		} 
 	}
 
 	return {
 		cards,
-		deck
+		deck,
+		bases_deck
 	}
 }

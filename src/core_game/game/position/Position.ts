@@ -1,28 +1,61 @@
 import { PlayerID } from "../GameState"
-import { HandPosition, DeckPosition, DiscardPilePosition, isHandPosition, isDeckPosition, isDiscardPilePosition } from "./PlayerPositions"
-import { NoPosition, isNoPosition } from "./NoPosition"
-import { BoardPosition, BasesDeckPosition, BasesDiscardPilePosition, isBoardPosition, isBasesDeckPosition, isBasesDiscardPilePosition } from "./BoardPositions"
 
 export type Position = NoPosition | HandPosition | DeckPosition | BasePosition | BoardPosition | DiscardPilePosition | BasesDeckPosition | AboutToBePlayedPosition | BasesDiscardPilePosition
 
-export function isPosition(data: any): data is Position {
-	return isNoPosition(data) || isHandPosition(data) || isDeckPosition(data) || isBasePosition(data) || isBoardPosition(data) || isDiscardPilePosition(data) || isBasesDeckPosition(data) || isAboutToBePlayedPosition(data) || isBasesDiscardPilePosition(data)
+export enum PositionType {
+	Base,
+	isAboutToBePlayed,
+	Board,
+	BasesDeck,
+	basesDiscardPile,
+	Hand,
+	DiscardPile,
+	Deck,
+	NoPosition,
 }
 
+export const FIELD_POSITIONS: PositionType[] = [
+	PositionType.Board, PositionType.Base
+]
 
 export interface BasePosition {
-	position: "base"
+	positionType: PositionType.Base
 	base_id: number
-}
-export function isBasePosition(data: any): data is BasePosition {
-	return data.position === "base" && typeof data.base_id === "number"
 }
 
 export interface AboutToBePlayedPosition {
-	position: "is-about-to-be-played"
+	positionType: PositionType.isAboutToBePlayed
 	playerID: PlayerID
 }
-export function isAboutToBePlayedPosition(data: any): data is BasesDeckPosition {
-	return data.position === "is-about-to-be-played" &&
-		typeof data.playerID === "number"
+
+export interface BoardPosition {
+	positionType: PositionType.Board
+}
+
+export interface BasesDeckPosition {
+	positionType: PositionType.BasesDeck
+}
+
+export interface BasesDiscardPilePosition {
+	positionType: PositionType.basesDiscardPile
+}
+
+
+export interface HandPosition {
+	positionType: PositionType.Hand
+	playerID: PlayerID;
+}
+
+export interface DiscardPilePosition {
+	positionType: PositionType.DiscardPile
+	playerID: PlayerID;
+}
+
+export interface DeckPosition {
+	positionType: PositionType.Deck
+	playerID: PlayerID;
+}
+
+export interface NoPosition {
+	positionType: PositionType.NoPosition
 }

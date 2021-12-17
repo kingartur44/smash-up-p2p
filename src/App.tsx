@@ -17,7 +17,7 @@ export const App = observer(() => {
 	useEffect(() => {
 		const intervalID = setInterval(() => {
 			gameServer.tick()
-		}, 500)
+		}, 100)
 		return () => {
 			clearInterval(intervalID)
 		}

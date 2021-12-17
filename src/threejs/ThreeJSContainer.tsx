@@ -1,6 +1,6 @@
 import { FC, Suspense, useRef } from 'react'
 import { Camera, Canvas } from '@react-three/fiber'
-import { PerspectiveCamera, useContextBridge } from '@react-three/drei'
+import { OrthographicCamera, useContextBridge } from '@react-three/drei'
 import { Euler } from 'three'
 import { GameScreenContext } from '../GameScreenContext'
 import { observer } from 'mobx-react-lite'
@@ -45,8 +45,8 @@ export const ThreeFiberScene = observer(() => {
 			<color attach="background" args={["cyan"]} />
 
 			<ContextBridge>
-				<PerspectiveCamera ref={currentCamera}
-					rotation={new Euler(-Math.PI / 4)}
+				<OrthographicCamera ref={currentCamera}
+					rotation={new Euler(-Math.PI / 5)}
 					position={[0, 0, -6]}
 				>
 					<ambientLight />
@@ -56,7 +56,7 @@ export const ThreeFiberScene = observer(() => {
 					{cardsProps.map(cardProps => {
 						return <Card3DModel {...cardProps} />
 					})}
-				</PerspectiveCamera>
+				</OrthographicCamera>
 			</ContextBridge>
 		</Canvas>
 	</div>

@@ -1,11 +1,12 @@
 import { Euler } from "three"
 import { GameCardId, PlayerID } from "../core_game/game/GameState"
 import { AboutToBePlayedPosition, BasePosition } from "../core_game/game/position/Position"
-import { DeckPosition, DiscardPilePosition, HandPosition } from "../core_game/game/position/PlayerPositions"
+import { DeckPosition, DiscardPilePosition, HandPosition } from "../core_game/game/position/Position"
 import { useGameScreenContext } from "../GameScreenContext"
 import { ClientGameCard, ClientGameState } from "../core_game/client_game/ClientGameState"
 
 const TABLE_Z_ZERO = 0
+const CARD_ELEVATION = 0.02
 
 const CARD_WIDTH = 1
 const CARD_HEIGHT = 1.3
@@ -64,8 +65,8 @@ export function usePositions(): PositionsOutput {
 
 	function getPlayerDeckPosition(player: PlayerID): Parameters<THREE.Vector3['set']> {
 		const data: Parameters<THREE.Vector3['set']>[] = [
-			[4, -4, TABLE_Z_ZERO],
-			[-4, 4, TABLE_Z_ZERO]
+			[7, -5.5, TABLE_Z_ZERO],
+			[-7, 5.5, TABLE_Z_ZERO]
 		]
 		const referencePosition = player === gameServer.playerID ? 0 : 1
 		return data[referencePosition]
@@ -74,14 +75,14 @@ export function usePositions(): PositionsOutput {
 	function getCardDeckPosition(card: ClientGameCard, deckPosition: DeckPosition): PositionAndRotation {
 		const playerID = deckPosition.playerID
 		if (playerID === null) {
-			throw new Error("Logic Error: The card has no controller")
+			throw new Error("Logic Error: Wich deck the card shoud go in?")
 		}
 		const cardIndex = clientGameState.players[playerID].deck.findIndex(item => item.id === card.id)
 		if (cardIndex === -1) {
 			throw new Error("Logic Error: The card is not in the deck")
 		}
 
-		const cardElevation = cardIndex * 0.01
+		const cardElevation = cardIndex * CARD_ELEVATION
 		const deckGroundPosition = getPlayerDeckPosition(playerID)
 
 		const cardPosition: Parameters<THREE.Vector3['set']> = [
@@ -113,16 +114,16 @@ export function usePositions(): PositionsOutput {
 			throw new Error("The card is not in the discard pile")
 		}
 
-		const cardElevation = cardIndex * 0.01
+		const cardElevation = cardIndex * CARD_ELEVATION
 		
 
 		const positionsAndRotations: PositionAndRotation[] = [
 			{
-				position: [6, -4, TABLE_Z_ZERO + cardElevation],
+				position: [7, -3.5, TABLE_Z_ZERO + cardElevation],
 				rotation: new Euler(0)
 			},
 			{
-				position: [-6, 4, TABLE_Z_ZERO + cardElevation],
+				position: [-7, 3.5, TABLE_Z_ZERO + cardElevation],
 				rotation: new Euler(Math.PI, 0, 0)
 			}
 		]
@@ -145,10 +146,10 @@ export function usePositions(): PositionsOutput {
 			{
 				position: [
 					0 + cardXAdjustment,
-					-6.5,
-					2.5
+					-6.07,
+					3.4
 				],
-				rotation: new Euler(Math.PI / 4)
+				rotation: new Euler(Math.PI / 5)
 			},
 			{
 				position: [0 + cardXAdjustment, 4, 3],
@@ -202,7 +203,7 @@ export function usePositions(): PositionsOutput {
 			throw new Error("The card is not in the base deck")
 		}
 
-		const cardElevation = cardIndex * 0.01
+		const cardElevation = cardIndex * CARD_ELEVATION
 
 		return {
 			position: [

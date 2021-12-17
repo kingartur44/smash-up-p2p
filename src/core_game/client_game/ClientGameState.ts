@@ -1,10 +1,11 @@
-import { GameCardId, PlayerID } from "../game/GameState";
+import { GameCardId, GamePhase, PlayerID } from "../game/GameState";
 import { Position } from "../game/position/Position";
 
 export type ClientGameAction = {
 	type: "None"
 } | {
-	type: "ChooseTarget",
+	type: "ChooseTarget"
+	playerID: PlayerID
 	possibleTargets: GameCardId[]
 	prompt: string
 	canSelectNull: boolean
@@ -12,7 +13,8 @@ export type ClientGameAction = {
 
 
 export interface ClientGameState {
-	phase: string;
+	phase: GamePhase;
+	phaseStep: "start" | "process" | "end" 
 	turnPlayerId: PlayerID
 
 	players: ClientGamePlayer[]

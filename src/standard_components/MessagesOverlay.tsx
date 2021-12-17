@@ -6,13 +6,15 @@ export const MessagesOverlay = observer(() => {
 
 	const { clientGameState, gameServer } = useGameScreenContext()
 
-	switch (clientGameState.currentAction.type) {
+	const currentAction = clientGameState.currentAction
+
+	switch (currentAction.type) {
 		case "None": {
 			return null
 		}
 
 		case "ChooseTarget": {
-			const canSelectNull = clientGameState.currentAction.canSelectNull
+			const canSelectNull = currentAction.canSelectNull
 			const selectNullCallback = () => {
 				gameServer.sendServerMessage({
 					type: "pick_target",
@@ -21,8 +23,14 @@ export const MessagesOverlay = observer(() => {
 				})
 			}
 
+			if (currentAction.playerID !== gameServer.playerID) {
+				return <div className={classes.prompt_screen}>
+					<span>The other player is making a choice..</span>
+				</div>
+			}
+
 			return <div className={classes.prompt_screen}>
-				<span>{clientGameState.currentAction.prompt}</span>
+				<span>{currentAction.prompt}</span>
 				{canSelectNull && <button onClick={selectNullCallback}>Select None</button>}
 			</div>
 		}

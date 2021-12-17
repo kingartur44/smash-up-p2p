@@ -15,6 +15,7 @@
 	overflow: hidden;
 }
 
+
 .card_info {
 	display: flex;
 	flex-direction: column;
@@ -24,6 +25,12 @@
 	background-color: rgba(155, 155, 155, 0.3);
 
 	overflow: hidden;
+}
+
+@media screen and (max-width: 1350px) {
+	.card_info {
+		pointer-events: none;
+	}
 }
 
 .card_info img {

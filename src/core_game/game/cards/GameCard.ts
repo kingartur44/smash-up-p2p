@@ -1,13 +1,16 @@
 import { ActionDatabaseCard, BaseDatabaseCard, DatabaseCard, MinionDatabaseCard } from "../../database/DatabaseCard"
-import { Position } from "../position/Position"
-import { GameState, PlayerID } from "../GameState"
+import { FIELD_POSITIONS, Position, PositionType } from "../position/Position"
+import { GamePhase, GameState, PlayerID } from "../GameState"
 import { BaseGameCard } from "./BaseGameCard"
 import { ActionGameCard } from "./ActionGameCard"
 import { MinionGameCard } from "./MinionGameCard"
 import { CardType } from "../../data/CardType"
 import { GamePlayer } from "../GamePlayer"
-import { AfterBaseScore_OverrideDestination, GameCardEffect_OLD, GenericPositions, OnPlayEffect } from "./CardEffects"
+import { GameCardEffect } from "./GameCardEffects"
+import { AfterBaseScore_OverrideDestination, GenericPositions } from "./GameCardState"
 import { ClientActionCard, ClientBaseCard, ClientGameCard, ClientMinionCard } from "../../client_game/ClientGameState"
+import { GameCardEvent, GameCardEventType } from "./GameEvent"
+import { GameCardState } from "./GameCardState"
 
 type CardId = number
 
@@ -18,7 +21,9 @@ export abstract class GameCard {
 	position: Position
 	owner_id: PlayerID | null
 	controller_id: PlayerID | null
-	effects: GameCardEffect_OLD[]
+
+	effects: GameCardEffect[]
+	states: GameCardState[]
 
 	database_card_id: string;
 	
@@ -29,10 +34,6 @@ export abstract class GameCard {
 
 	abstract get targets(): CardId[]
 	abstract get isPlayable(): boolean
-
-
-	abstract serialize(): any
-	abstract deserialize(input: any): void
 	
 
 	constructor(gameState: GameState) {
@@ -40,23 +41,52 @@ export abstract class GameCard {
 
 		this.id = -1
 		this.position = {
-			position: "no-position"
+			positionType: PositionType.NoPosition
 		}
+
 		this.effects = []
+		this.states = []
+
 		this.database_card_id = "";
 
 		this.owner_id = null;
 		this.controller_id = null;
 	}
 
-	returnToOwnerHand() {
-		if (this.owner_id === null) {
-			return
+
+	dispatchEvent(event: GameCardEvent) {
+		switch (event.type) {
+			case GameCardEventType.ReturnToHand: {
+				if (this.owner_id === null) {
+					return
+				}
+				this.moveCard({
+					positionType: PositionType.Hand,
+					playerID: this.owner_id
+				})
+				break
+			}
+			case GameCardEventType.GoToTheBottomOfTheDeck: {
+				if (this.owner_id === null) {
+					return
+				}
+				this.moveCard({
+					positionType: PositionType.Deck,
+					playerID: this.owner_id
+				}, "bottom")
+				break
+			}
+			case GameCardEventType.Destroy: {
+				if (this.owner_id === null) {
+					return
+				}
+				this.moveCard({
+					positionType: PositionType.DiscardPile,
+					playerID: this.owner_id
+				})
+				break
+			}
 		}
-		this.moveCard({
-			position: "hand",
-			playerID: this.owner_id
-		})
 	}
 
 	initializeEffects() {
@@ -80,46 +110,51 @@ export abstract class GameCard {
 		
 	}
 
-	registerEffect(effect: GameCardEffect_OLD) {
+	registerEffect(effect: GameCardEffect) {
 		this.effects.push(effect)
 	}
 
+	addState(state: GameCardState) {
+		this.states.push(state)
+	}
+
 	async onPlay() {
-		for (const effect of this.queryEffects<OnPlayEffect>("on-play")) {
-			if (effect.type === "on-play-minion" && this.isMinionCard()) {
-				await effect.callback(this, this.gameState)
-			} else if (effect.type === "on-play-action" && this.isActionCard()) {
-				await effect.callback(this, this.gameState)
-			} else {
+		for (const effect of this.effects) {
+			if (effect.type === "on-play-minion") {
+				if (this.isMinionCard()) {
+					await effect.callback(this, this.gameState)
+				}
+				
+			} else if (effect.type === "on-play-action") {
+				if (this.isActionCard()) {
+					await effect.callback(this, this.gameState)
+				}
+			} else if (effect.type === "ongoing") {
+				if (this.isMinionCard()) {
+					await effect.callback(this, this.gameState)
+				}				
+			} else if (effect.type === "special-minion") {
+				if (this.isMinionCard()) {
+					await effect.callback(this, this.gameState)
+				}
+			} 
+			else {
 				throw new Error("The effect is not activable")
 			}
 		}
 	}
 
-	queryEffects<T extends GameCardEffect_OLD>(effectType: string): T[] {
-		return this.effects
-			.filter(effect => {
-				if (effect.type !== effectType) {
+
+	queryStates<T extends GameCardState>(input: string[] | string): T[] {
+		const effectTypes = Array.isArray(input) ? input : [input]
+		return this.states
+			.filter(state => {
+				if (!FIELD_POSITIONS.includes(this.position.positionType)) {
 					return false
 				}
-				if ("positionRequirement" in effect) {
-					const isRightPosition = (() => {
-						switch (effect.positionRequirement) {
-							case GenericPositions.Deck:
-								return this.position.position === "deck"
-							case GenericPositions.DiscardPile:
-								return this.position.position === "discard-pile"
-							case GenericPositions.Field:
-								return ["field", "base"].includes(this.position.position)
-							case GenericPositions.Hand:
-								return this.position.position === "hand"
-						}
-					})()
-					if (!isRightPosition) {
-						return false
-					}
+				if (!effectTypes.includes(state.type)) {
+					return false
 				}
-				
 				return true
 			}) as T[]
 	}
@@ -130,7 +165,7 @@ export abstract class GameCard {
 			throw new Error("The card has no owner")
 		}
 
-		const overrideEffects = this.queryEffects<AfterBaseScore_OverrideDestination>("after-base-score_override-destination")
+		const overrideEffects = this.queryStates<AfterBaseScore_OverrideDestination>("after-base-score_override-destination")
 
 		if (overrideEffects.length > 1) {
 			throw new Error("TODO Error: Decidere cosa fare in queste situazioni")
@@ -145,7 +180,10 @@ export abstract class GameCard {
 			if (effectIsActivated) {
 				switch (effect.newDestination) {
 					case GenericPositions.Hand: {
-						this.returnToOwnerHand()
+						this.dispatchEvent({
+							initiator: this,
+							type: GameCardEventType.ReturnToHand
+						})
 						break
 					}
 					default: {
@@ -157,7 +195,7 @@ export abstract class GameCard {
 		}
 
 		this.moveCard({
-			position: "discard-pile",
+			positionType: PositionType.DiscardPile,
 			playerID: this.owner_id
 		})
 	}
@@ -191,24 +229,24 @@ export abstract class GameCard {
 
 
 	private removeFromItsPosition() {
-		switch (this.position.position) {
-			case "hand": {
+		switch (this.position.positionType) {
+			case PositionType.Hand: {
 				this.gameState.players[this.position.playerID].hand.removeCard(this)
 				break
 			}
-			case "deck": {
+			case PositionType.Deck: {
 				this.gameState.players[this.position.playerID].deck.removeCard(this)
 				break
 			}
-			case "is-about-to-be-played": {
+			case PositionType.isAboutToBePlayed: {
 				this.gameState.players[this.position.playerID].aboutToBePlayedCards.removeCard(this)
 				break
 			}
-			case "discard-pile": {
+			case PositionType.DiscardPile: {
 				this.gameState.players[this.position.playerID].discardPile.removeCard(this)
 				break
 			}
-			case "base": {
+			case PositionType.Base: {
 				const base = this.gameState.getCard(this.position.base_id)
 				if (!base.isBaseCard()) {
 					throw new Error(`Logic Error: The card is not a base card`)
@@ -217,19 +255,19 @@ export abstract class GameCard {
 				base.attached_cards.removeCard(this)
 				break
 			}
-			case "bases_discard_pile": {
+			case PositionType.basesDiscardPile: {
 				this.gameState.bases_discard_pile.removeCard(this)
 				break
 			}
-			case "bases_deck": {
+			case PositionType.BasesDeck: {
 				this.gameState.bases_deck.removeCard(this)
 				break
 			}
-			case "board": {
+			case PositionType.Board: {
 				this.gameState.in_play_bases.removeCard(this)
 				break
 			}
-			case "no-position": {
+			case PositionType.NoPosition: {
 				break
 			}
 			default: {
@@ -238,85 +276,105 @@ export abstract class GameCard {
 		}
 
 		this.position = {
-			position: "no-position"
+			positionType: PositionType.NoPosition
 		}
 	}
 
-	moveCard(newPosition: Position) {
+	moveCard(newPosition: Position, extra?: "shuffle-in" | "top" | "bottom") {
 		this.removeFromItsPosition()
 
-		switch (newPosition.position) {
-			case "base": {
+		if (!FIELD_POSITIONS.includes(newPosition.positionType)) {
+			this.removeAllStates()
+		}
+
+		switch (newPosition.positionType) {
+			case PositionType.Base: {
 				const base = this.gameState.getCard(newPosition.base_id)
 				if (!base.isBaseCard()) {
 					throw new Error(`Logic Error: The card is not a base card`)
 				}
 
-				base.attached_cards.addCard(this)
+				base.attached_cards.addToBottom(this)
 				this.position = newPosition
 				break
 			}
-			case "hand": {
+			case PositionType.Hand: {
 				const player = this.gameState.players[newPosition.playerID] as GamePlayer | undefined
 				if (player === undefined) {
 					throw new Error(`The player [${newPosition.playerID}] does not exist`)
 				}
 
-				player.hand.addCard(this)
+				player.hand.addToBottom(this)
 				this.position = newPosition
 				break
 			}
-			case "is-about-to-be-played": {
+			case PositionType.isAboutToBePlayed: {
 				const player = this.gameState.players[newPosition.playerID] as GamePlayer | undefined
 				if (player === undefined) {
 					throw new Error(`The player [${newPosition.playerID}] does not exist`)
 				}
 
-				player.aboutToBePlayedCards.addCard(this)
+				player.aboutToBePlayedCards.addToBottom(this)
 				this.position = newPosition
 				break
 			}
-			case "discard-pile": {
+			case PositionType.DiscardPile: {
 				const player = this.gameState.players[newPosition.playerID] as GamePlayer | undefined
 				if (player === undefined) {
 					throw new Error(`The player [${newPosition.playerID}] does not exist`)
 				}
 
-				player.discardPile.addCard(this)
+				player.discardPile.addToBottom(this)
 				this.position = newPosition
 				break
 			}
-			case "deck": {
+			case PositionType.Deck: {
 				const player = this.gameState.players[newPosition.playerID] as GamePlayer | undefined
 				if (player === undefined) {
 					throw new Error(`The player [${newPosition.playerID}] does not exist`)
 				}
 
-				player.deck.addCard(this)
+				switch (extra) {
+					default:
+					case "top": {
+						player.deck.addToTop(this)
+						break
+					}
+					case "shuffle-in": {
+						player.deck.addToTop(this)
+						player.deck.shuffle()
+						break
+					}
+					case "bottom": {
+						player.deck.addToBottom(this)
+						break
+					}
+				}
+
 				this.position = newPosition
 				break
 			}
-			case "board": {
+			case PositionType.Board: {
 				if (!this.isBaseCard()) {
 					throw new Error("Logic Error: Trying to move a non-base card on the board")
 				}
-				this.gameState.in_play_bases.addCard(this)
+				this.gameState.in_play_bases.addToBottom(this)
 				this.position = newPosition
 				break
 			}
-			case "bases_deck": {
+			case PositionType.BasesDeck: {
 				if (!this.isBaseCard()) {
 					throw new Error("Logic Error: Trying to move a non-base card on the board")
 				}
-				this.gameState.bases_deck.addCard(this)
+				this.gameState.bases_deck.addToBottom(this)
 				this.position = newPosition
 				break
 			}
-			case "bases_discard_pile": {
+			case PositionType.basesDiscardPile: {
 				if (!this.isBaseCard()) {
 					throw new Error("Logic Error: Trying to move a non-base card on the board")
 				}
-				this.gameState.bases_discard_pile.addCard(this)
+				this.gameState.bases_discard_pile.addToBottom(this)
 				this.position = newPosition
 				break
 			}
@@ -382,4 +440,28 @@ export abstract class GameCard {
 			throw new Error("Error: Card not supported")
 		}
 	}
+
+
+	updateCardStates({turnPlayer, gamePhase, timing}: {turnPlayer: PlayerID, gamePhase: GamePhase, timing: "start" | "end"}) {
+		this.states = this.states.filter(state => {
+			if (state.expire) {
+				if (state.expire.phase === gamePhase && state.expire.timing === timing) {
+					if (state.expire.player_id) {
+						if (state.expire.player_id === turnPlayer) {
+							return false
+						} 
+					} else {
+						return false
+					}
+				}
+			}
+
+			return true
+		})
+	}
+
+	removeAllStates() {
+		this.states = []
+	}
+
 }

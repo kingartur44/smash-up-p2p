@@ -5,6 +5,7 @@ import { GameState } from "./GameState";
 import { ClientGamePlayer } from "../client_game/ClientGameState";
 import { GameCardStack } from "./GameCardStack";
 import { DatabaseCard } from "../database/DatabaseCard";
+import { PositionType } from "./position/Position";
 
 
 export class GamePlayer {
@@ -79,7 +80,7 @@ export class GamePlayer {
 				newCard.owner_id = this.id
 				newCard.controller_id = this.id
 				newCard.moveCard({
-					position: "deck",
+					positionType: PositionType.Deck,
 					playerID: this.id
 				})
 			}
@@ -93,46 +94,10 @@ export class GamePlayer {
 			const card = this.deck.getTopCard()
 			
 			card.moveCard({
-				position: "hand",
+				positionType: PositionType.Hand,
 				playerID: this.id
 			})
 		}
-	}
-
-	serialize(): any {
-		return {
-			id: this.id,
-			name: this.name,
-			color: this.color,
-
-			victoryPointsDetailed: this.victoryPointsDetailed,
-			minionPlays: this.minionPlays,
-			actionPlays: this.actionPlays,
-
-			deck: this.deck,
-			hand: this.hand,
-			discardPile: this.discardPile,
-			aboutToBePlayedCards: this.aboutToBePlayedCards,
-
-			factions: this.factions
-		};
-	}
-
-	deserialize(input: any) {
-		this.id = input.id;
-		this.name = input.name;
-		this.color = input.color
-		this.victoryPointsDetailed = input.victoryPointsDetailed;
-
-		this.minionPlays = input.minionPlays
-		this.actionPlays = input.actionPlays
-
-		this.deck = input.deck;
-		this.hand = input.hand;
-		this.discardPile = input.discardPile;
-		this.aboutToBePlayedCards = input.aboutToBePlayedCards
-
-		this.factions = input.factions;
 	}
 
 	toClientGamePlayer(): ClientGamePlayer {
