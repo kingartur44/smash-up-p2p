@@ -1,4 +1,4 @@
-import { CardType } from "../../data/CardType"
+import { ActionCardType, CardType } from "../../data/CardType"
 import { generateSet } from "../utils"
 import { Faction } from "./Factions"
 
@@ -119,7 +119,7 @@ const Set = generateSet(Faction.Aliens, [
 							position: [
 								{
 									positionType: PositionType.Base,
-									base_id: card.card_current_base!.id
+									base_id: card.parent_card()!.id
 								}
 							],
 							name: {
@@ -145,6 +145,7 @@ const Set = generateSet(Faction.Aliens, [
 
 	{
 		type: CardType.Action,
+		actionType: ActionCardType.StandardAction,
 		quantityInDeck: 1,
 
 		name: "Abduction",
@@ -184,6 +185,7 @@ const Set = generateSet(Faction.Aliens, [
 
 	{
 		type: CardType.Action,
+		actionType: ActionCardType.StandardAction,
 		quantityInDeck: 2,
 
 		name: "Beam Up",
@@ -219,6 +221,7 @@ const Set = generateSet(Faction.Aliens, [
 
 	{
 		type: CardType.Action,
+		actionType: ActionCardType.StandardAction,
 		quantityInDeck: 1,
 
 		name: "Crop Circles",
@@ -261,6 +264,7 @@ const Set = generateSet(Faction.Aliens, [
 	{
 		type: CardType.Action,
 		quantityInDeck: 2,
+		actionType: ActionCardType.StandardAction,
 
 		name: "Disintegrator",
 		description: "Return a minion to its owner’s hand.",
@@ -269,6 +273,7 @@ const Set = generateSet(Faction.Aliens, [
 
 	{
 		type: CardType.Action,
+		actionType: ActionCardType.StandardAction,
 		quantityInDeck: 1,
 
 		name: "Invasion",
@@ -319,6 +324,7 @@ const Set = generateSet(Faction.Aliens, [
 
 	{
 		type: CardType.Action,
+		actionType: ActionCardType.PlayOnBase,
 		quantityInDeck: 1,
 
 		name: "Jammed Signal",
@@ -329,6 +335,7 @@ const Set = generateSet(Faction.Aliens, [
 	{
 		type: CardType.Action,
 		quantityInDeck: 1,
+		actionType: ActionCardType.StandardAction,
 
 		name: "Probe",
 		description: "Look at another player’s hand and choose a minion in it. That player discards that minion.",
@@ -338,6 +345,7 @@ const Set = generateSet(Faction.Aliens, [
 	{
 		type: CardType.Action,
 		quantityInDeck: 1,
+		actionType: ActionCardType.StandardAction,
 
 		name: "Terraforming",
 		description: "Search the base deck for a base. Swap it with a base in play (discard all actions attached to it). All minions from the original base remain. Shuffle the base deck. You may play an extra minion on the new base.",

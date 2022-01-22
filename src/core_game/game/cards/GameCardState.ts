@@ -1,5 +1,6 @@
 import { GamePhase, GameState, PlayerID } from "../GameState";
 import { BaseGameCard } from "./BaseGameCard";
+import { GameCard } from "./GameCard";
 import { MinionGameCard } from "./MinionGameCard";
 
 export type GameCardState = PowerBoost | ReduceBreakpoint | AfterBaseScore_OverrideDestination
@@ -20,7 +21,7 @@ export interface GamePhasesTiming {
 
 export interface PowerBoost {
 	type: "power-boost"
-	value: ((card: MinionGameCard, gameState: GameState) => number) | number
+	value: number | ((card: MinionGameCard, gameState: GameState) => number) | ((card: GameCard, gameState: GameState) => Map<MinionGameCard, number>)
 
 	expire?: GamePhasesTiming
 }
@@ -36,6 +37,5 @@ export interface AfterBaseScore_OverrideDestination {
 export interface ReduceBreakpoint {
 	type: "reduce-breakpoint"
 	value: ((card: BaseGameCard, gameState: GameState) => number) | number
-	
 	expire?: GamePhasesTiming
 }

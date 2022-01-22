@@ -10,19 +10,12 @@ import { ReduceBreakpoint } from "./GameCardState";
 
 
 export class BaseGameCard extends GameCard {
-
 	type: CardType.Base;
-
-	
-	attached_cards: GameCardStack;
 
 	constructor(gameState: GameState) {
 		super(gameState)
 
 		this.type = CardType.Base;
-
-		
-		this.attached_cards = new GameCardStack(gameState);
 
 		makeObservable(this, {
 			id: observable,
@@ -38,6 +31,7 @@ export class BaseGameCard extends GameCard {
 			isPlayable: computed,
 			owner: computed,
 			controller: computed,
+			parent_card: observable,
 
 			initializeEffects: action,
 			registerEffect: action,

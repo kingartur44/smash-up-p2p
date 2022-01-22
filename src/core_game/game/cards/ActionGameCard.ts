@@ -3,24 +3,24 @@ import { Cards } from "../../database/core_set/core_set";
 import { action, computed, makeObservable, observable } from "mobx";
 import { GameCurrentActionType, GamePhase, GameState } from "../GameState";
 import { GameCard } from "./GameCard";
-import { CardType } from "../../data/CardType";
+import { ActionCardType, CardType } from "../../data/CardType";
 import { GameQuery } from "../GameQueryManager";
 import { PositionType } from "../position/Position";
 
 
 export class ActionGameCard extends GameCard {
-
 	type: CardType.Action
+
 	
-	playTargetQuery?: GameQuery
+	_playTargetQuery?: GameQuery
 
 
 	constructor(gameState: GameState) {
 		super(gameState)
 
-
 		this.type = CardType.Action;
-		this.playTargetQuery = undefined
+
+		this._playTargetQuery = undefined
 
 		makeObservable(this, {
 			id: observable,
@@ -36,13 +36,19 @@ export class ActionGameCard extends GameCard {
 			isPlayable: computed,
 			owner: computed,
 			controller: computed,
+			parent_card: observable,
 
 			initializeEffects: action,
 			registerEffect: action,
 
 			// Custom
-			playTargetQuery: observable
+			_playTargetQuery: observable,
+			playTargetQuery: computed
 		});
+	}
+
+	get actionType(): ActionCardType {
+		return this.databaseCard.actionType
 	}
 
 	get databaseCard(): ActionDatabaseCard {
@@ -53,7 +59,27 @@ export class ActionGameCard extends GameCard {
 		return 0;
 	}
 
-	
+	set playTargetQuery(newValue: undefined | GameQuery) {
+		this._playTargetQuery = newValue
+	}
+
+	get playTargetQuery(): undefined | GameQuery {
+		if (this._playTargetQuery === undefined) {
+			switch (this.actionType) {
+				case ActionCardType.PlayOnBase: {
+					return {
+						cardType: [CardType.Base]
+					}
+				}
+				case ActionCardType.PlayOnMinion: {
+					return {
+						cardType: [CardType.Minion]
+					}
+				}
+			}
+		}
+		return this._playTargetQuery
+	}
 
 	get targets(): number[] {
 		if (!this.playTargetQuery) {

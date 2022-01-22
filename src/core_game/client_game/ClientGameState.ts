@@ -63,6 +63,7 @@ export interface ClientMinionCard {
 	isPlayable: boolean;
 	targets: GameCardId[];
 
+	attached_cards: ClientGameCard[]
 	power: any
 }
 
@@ -79,6 +80,7 @@ export interface ClientActionCard {
 	isPlayable: boolean;
 	targets: GameCardId[];
 
+	attached_cards: ClientGameCard[]
 	power: any
 }
 
@@ -95,6 +97,8 @@ export interface ClientBaseCard {
 	isPlayable: boolean
 	targets: GameCardId[];
 	
-	breakpoint: any
+	breakpoint: number
+	totalPowerOnBase: number
+
 	playerCards: Record<number, GameCardId[]>
 }

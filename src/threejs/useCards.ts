@@ -30,10 +30,7 @@ export function useCards(): Card3DModelProps[] {
 			}
 
 			case PositionType.Deck: {
-				const cardPR = positions.getCardDeckPosition(
-					card,
-					position
-				)
+				const cardPR = positions.getCardDeckPosition(card, position)
 
 				cardPrototypes.push({
 					key: card.id,
@@ -103,6 +100,20 @@ export function useCards(): Card3DModelProps[] {
 			case PositionType.Base: {
 
 				const cardPR = positions.getCardOnBasePosition(card, position)
+
+				cardPrototypes.push({
+					key: card.id,
+					card: card,
+					isFlipped: false,
+					position: cardPR.position,
+					rotation: cardPR.rotation
+				})
+				break
+			}
+
+			case PositionType.Minion: {
+
+				const cardPR = positions.getCardOnMinionPosition(card, position)
 
 				cardPrototypes.push({
 					key: card.id,

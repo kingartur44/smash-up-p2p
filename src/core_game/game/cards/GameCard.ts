@@ -11,6 +11,8 @@ import { AfterBaseScore_OverrideDestination, GenericPositions } from "./GameCard
 import { ClientActionCard, ClientBaseCard, ClientGameCard, ClientMinionCard } from "../../client_game/ClientGameState"
 import { GameCardEvent, GameCardEventType } from "./GameEvent"
 import { GameCardState } from "./GameCardState"
+import { GameCardStack } from "../GameCardStack"
+import assert from "assert"
 
 type CardId = number
 
@@ -22,6 +24,7 @@ export abstract class GameCard {
 	owner_id: PlayerID | null
 	controller_id: PlayerID | null
 
+	attached_cards: GameCardStack
 	effects: GameCardEffect[]
 	states: GameCardState[]
 
@@ -44,6 +47,7 @@ export abstract class GameCard {
 			positionType: PositionType.NoPosition
 		}
 
+		this.attached_cards = new GameCardStack(this.gameState)
 		this.effects = []
 		this.states = []
 
@@ -124,7 +128,6 @@ export abstract class GameCard {
 				if (this.isMinionCard()) {
 					await effect.callback(this, this.gameState)
 				}
-				
 			} else if (effect.type === "on-play-action") {
 				if (this.isActionCard()) {
 					await effect.callback(this, this.gameState)
@@ -255,7 +258,16 @@ export abstract class GameCard {
 				base.attached_cards.removeCard(this)
 				break
 			}
-			case PositionType.basesDiscardPile: {
+			case PositionType.Minion: {
+				const minion = this.gameState.getCard(this.position.minion_id)
+				if (!minion.isMinionCard()) {
+					throw new Error(`Logic Error: The card is not a minion card`)
+				}
+
+				minion.attached_cards.removeCard(this)
+				break
+			}
+			case PositionType.BasesDiscardPile: {
 				this.gameState.bases_discard_pile.removeCard(this)
 				break
 			}
@@ -295,6 +307,16 @@ export abstract class GameCard {
 				}
 
 				base.attached_cards.addToBottom(this)
+				this.position = newPosition
+				break
+			}
+			case PositionType.Minion: {
+				const minion = this.gameState.getCard(newPosition.minion_id)
+				if (!minion.isMinionCard()) {
+					throw new Error(`Logic Error: The card is not a minion card`)
+				}
+
+				minion.attached_cards.addToBottom(this)
 				this.position = newPosition
 				break
 			}
@@ -370,7 +392,7 @@ export abstract class GameCard {
 				this.position = newPosition
 				break
 			}
-			case PositionType.basesDiscardPile: {
+			case PositionType.BasesDiscardPile: {
 				if (!this.isBaseCard()) {
 					throw new Error("Logic Error: Trying to move a non-base card on the board")
 				}
@@ -378,69 +400,24 @@ export abstract class GameCard {
 				this.position = newPosition
 				break
 			}
+			default: {
+				throw new Error("TODO Error: this position is not yet supported")
+			}
 		}
 	}
 
-
-	toClientGameCardArray(): ClientGameCard {
-		if (this.isMinionCard()) {
-			const clientCard: ClientMinionCard = {
-				type: "minion",
-
-				id: this.id,
-				controller_id: this.controller_id,
-				databaseCard: {
-					name: this.databaseCard.name,
-					image: this.databaseCard.image,
-					description: this.databaseCard.description
-				},
-				isPlayable: this.isPlayable,
-				position: this.position,
-				power: this.power,
-				targets: this.targets
+	parent_card<T extends GameCard>(): T | undefined {
+		switch (this.position.positionType) {
+			case PositionType.Base: {
+				const base = this.gameState.getCard(this.position.base_id)
+				assert(base.isBaseCard(), "Logic Error: The card is not a base")
+				return base as GameCard as T
 			}
-			return clientCard
-		} else if (this.isBaseCard()) {
-			const clientCard: ClientBaseCard = {
-				type: "base",
-
-				id: this.id,
-				controller_id: this.controller_id,
-				databaseCard: {
-					name: this.databaseCard.name,
-					image: this.databaseCard.image,
-					description: this.databaseCard.description
-				},
-				isPlayable: this.isPlayable,
-				position: this.position,
-				targets: this.targets,
-				
-				breakpoint: this.breakpoint,
-				playerCards: this.playerCards
+			default: {
+				return undefined 
 			}
-			return clientCard
-		} else if (this.isActionCard()) {
-			const clientCard: ClientActionCard = {
-				type: "action",
-
-				id: this.id,
-				controller_id: this.controller_id,
-				databaseCard: {
-					name: this.databaseCard.name,
-					image: this.databaseCard.image,
-					description: this.databaseCard.description
-				},
-				isPlayable: this.isPlayable,
-				position: this.position,
-				power: this.power,
-				targets: this.targets
-			}
-			return clientCard
-		} else {
-			throw new Error("Error: Card not supported")
 		}
 	}
-
 
 	updateCardStates({turnPlayer, gamePhase, timing}: {turnPlayer: PlayerID, gamePhase: GamePhase, timing: "start" | "end"}) {
 		this.states = this.states.filter(state => {
@@ -464,4 +441,65 @@ export abstract class GameCard {
 		this.states = []
 	}
 
+	toClientGameCardArray(): ClientGameCard {
+		if (this.isMinionCard()) {
+			const clientCard: ClientMinionCard = {
+				type: "minion",
+
+				id: this.id,
+				controller_id: this.controller_id,
+				databaseCard: {
+					name: this.databaseCard.name,
+					image: this.databaseCard.image,
+					description: this.databaseCard.description
+				},
+				isPlayable: this.isPlayable,
+				position: this.position,
+				power: this.power,
+				targets: this.targets,
+				attached_cards: this.attached_cards.toClientGameCardArray()
+			}
+			return clientCard
+		} else if (this.isBaseCard()) {
+			const clientCard: ClientBaseCard = {
+				type: "base",
+
+				id: this.id,
+				controller_id: this.controller_id,
+				databaseCard: {
+					name: this.databaseCard.name,
+					image: this.databaseCard.image,
+					description: this.databaseCard.description
+				},
+				isPlayable: this.isPlayable,
+				position: this.position,
+				targets: this.targets,
+				
+				breakpoint: this.breakpoint,
+				totalPowerOnBase: this.totalPowerOnBase,
+				playerCards: this.playerCards
+			}
+			return clientCard
+		} else if (this.isActionCard()) {
+			const clientCard: ClientActionCard = {
+				type: "action",
+
+				id: this.id,
+				controller_id: this.controller_id,
+				databaseCard: {
+					name: this.databaseCard.name,
+					image: this.databaseCard.image,
+					description: this.databaseCard.description
+				},
+				isPlayable: this.isPlayable,
+				position: this.position,
+				power: this.power,
+				targets: this.targets,
+				attached_cards: this.attached_cards.toClientGameCardArray()
+			}
+			return clientCard
+		} else {
+			throw new Error("Error: Card not supported")
+		}
+	}
 }

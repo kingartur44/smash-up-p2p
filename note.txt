@@ -1,0 +1,9 @@
+Generate Game State:
+
+	1 - Check all effects that add abilities
+		- Check for "play on" cards
+		- Check for "ongoing" effects
+
+	2 - Resolve all the abilities
+
+	

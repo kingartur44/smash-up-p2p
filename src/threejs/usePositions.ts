@@ -1,9 +1,10 @@
 import { Euler } from "three"
 import { GameCardId, PlayerID } from "../core_game/game/GameState"
-import { AboutToBePlayedPosition, BasePosition } from "../core_game/game/position/Position"
+import { AboutToBePlayedPosition, BasePosition, MinionPosition, PositionType } from "../core_game/game/position/Position"
 import { DeckPosition, DiscardPilePosition, HandPosition } from "../core_game/game/position/Position"
 import { useGameScreenContext } from "../GameScreenContext"
 import { ClientGameCard, ClientGameState } from "../core_game/client_game/ClientGameState"
+import assert from "assert"
 
 const TABLE_Z_ZERO = 0
 const CARD_ELEVATION = 0.02
@@ -52,6 +53,7 @@ interface PositionsOutput {
 	getBasesDeckPosition: (card: ClientGameCard) => PositionAndRotation
 
 	getCardOnBasePosition: (card: ClientGameCard, position: BasePosition) => PositionAndRotation
+	getCardOnMinionPosition: (card: ClientGameCard, position: MinionPosition) => PositionAndRotation
 	getPlayerCardsZoneForBase: (base_id: GameCardId) => {
 		player: PlayerID,
 		position: Parameters<THREE.Vector3['set']>,
@@ -176,9 +178,6 @@ export function usePositions(): PositionsOutput {
 		return positionsAndRotations[referencePosition]
 	}
 
-	
-
-
 	function getBasePosition(card: ClientGameCard): PositionAndRotation {
 		const index = clientGameState.in_play_bases.findIndex(item => item.id === card.id)
 		if (index === -1) {
@@ -244,6 +243,37 @@ export function usePositions(): PositionsOutput {
 				basePosition[2] + 0.01
 			],
 			rotation: new Euler(0)
+		}
+	}
+
+
+	function getCardOnMinionPosition(card: ClientGameCard, position: MinionPosition): PositionAndRotation {
+		const minion = clientGameState.cards[position.minion_id]
+		if (minion.type !== "minion") {
+			throw new Error("Logic Error: the card is not a minion")
+		}
+		if (card.controller_id === null) {
+			throw new Error("Warning, the card has no controller")
+		}
+
+		const effectiveIndex = minion.attached_cards.findIndex(item => item.id === card.id)
+		if (effectiveIndex === -1) {
+			throw new Error("")
+		}
+
+		assert(minion.position.positionType === PositionType.Base)
+		const minionPosition = getCardOnBasePosition(minion, minion.position)
+
+		assert(minionPosition !== undefined)
+
+		const parentPosition = minionPosition.position
+		return {
+			position: [
+				parentPosition[0] + effectiveIndex * (1 + CARD_HORIZONTAL_SPACING),
+				parentPosition[1] + (CARD_HEIGHT / 2) + STANDARD_PADDING * 1.5,
+				parentPosition[2] + CARD_HEIGHT / 2
+			],
+			rotation: new Euler(45)
 		}
 	}
 
@@ -314,6 +344,7 @@ export function usePositions(): PositionsOutput {
 		getAboutToBePlayedPosition,
 		getBasePosition,
 		getBasesDeckPosition,
+		getCardOnMinionPosition,
 		getCardOnBasePosition,
 		getPlayerCardsZoneForBase
 	}

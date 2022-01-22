@@ -3,7 +3,7 @@ import { ActionGameCard } from "./ActionGameCard"
 import { MinionGameCard } from "./MinionGameCard"
 
 
-export type OnPlayEffect = OnPlayEffectMinionCard | OnPlayEffectActionCard
+export type OnPlayEffect = OnPlayEffectMinion | OnPlayEffectAction | OnPlayEffectPlayOnMinionAction
 
 export type SpecialEffect = SpecialMinionEffect
 
@@ -21,12 +21,17 @@ export interface SpecialMinionEffect {
 	callback: (card: MinionGameCard, gameState: GameState) => Promise<void>
 }
 
-export interface OnPlayEffectMinionCard {
+export interface OnPlayEffectMinion {
 	type: "on-play-minion",
 	callback: (card: MinionGameCard, gameState: GameState) => Promise<void>
 }
 
-export interface OnPlayEffectActionCard {
+export interface OnPlayEffectAction {
 	type: "on-play-action",
+	callback: (card: ActionGameCard, gameState: GameState) => Promise<void>
+}
+
+export interface OnPlayEffectPlayOnMinionAction {
+	type: "on-play-play-on-minion-action",
 	callback: (card: ActionGameCard, gameState: GameState) => Promise<void>
 }

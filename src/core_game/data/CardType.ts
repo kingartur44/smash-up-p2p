@@ -4,3 +4,11 @@ export enum CardType {
 	Base,
 	Titan
 }
+
+export enum ActionCardType {
+	Undefined,
+	
+	StandardAction,
+	PlayOnMinion,
+	PlayOnBase
+}

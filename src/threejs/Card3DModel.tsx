@@ -50,7 +50,7 @@ function useGameCard(card: ClientGameCard) {
 				gameServer.sendServerMessage({
 					type: "pick_target",
 					cardId: card.id,
-					playerID: gameServer.playerID,
+					playerID: gameServer.playerID
 				})
 			}
 		} else if (selectedCard === card.id && card.type === "action") {
@@ -173,6 +173,25 @@ export const Card3DModel: FC<Card3DModelProps> = observer(({ position: propsPosi
 		</Text>
 	})()
 
+	const breakpointIndicator = (() => {
+		if (card.type !== "base") {
+			return null
+		}
+		if (card.position.positionType !== PositionType.Board) {
+			return null
+		}
+
+		return <Text fontSize={0.5}
+			rotation={new Euler(Math.PI / 4)}
+			position={[0, 0.45, 0.25]}
+			color={"white"}
+			outlineWidth={0.02}
+			outlineColor="black"
+		>
+			{card.totalPowerOnBase} / {card.breakpoint}
+		</Text>
+	})()
+
 	const outlineShape = useMemo(() => {
 		const shape = new Shape()
 		drawRectFromCenter({shape, centerX: 0, centerY: 0, width: cardSize.width, height: cardSize.height})
@@ -208,6 +227,7 @@ export const Card3DModel: FC<Card3DModelProps> = observer(({ position: propsPosi
 		</line>}
 
 		{powerIndicator}
+		{breakpointIndicator}
 
 		{showActionPlayButton && <>
 			<Html transform sprite

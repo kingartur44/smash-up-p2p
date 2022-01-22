@@ -1,4 +1,4 @@
-import { CardType } from "../../data/CardType"
+import { ActionCardType, CardType } from "../../data/CardType"
 import { generateSet } from "../utils"
 import { Faction } from "./Factions"
 import { GameCardEventType } from "../../game/cards/GameEvent"
@@ -85,7 +85,7 @@ const Set = generateSet(Faction.Dinosaurs, [
 				callback: async (card, gameState) => {
 					card.addState({
 						type: "power-boost",
-						value: (card, gameState) => {
+						value: (card: MinionGameCard, gameState: GameState) => {
 							if (gameState.turnPlayerId !== card.controller_id) {
 								return 2
 							}
@@ -112,8 +112,8 @@ const Set = generateSet(Faction.Dinosaurs, [
 				callback: async (card, gameState) => {
 					card.addState({
 						type: "power-boost",
-						value: (card, gameState) => {
-							const raptorCurrentBase = card.card_current_base
+						value: (card: MinionGameCard, gameState: GameState) => {
+							const raptorCurrentBase = card.parent_card()
 							assert(raptorCurrentBase !== undefined, "The raptor is not in play")
 			
 							const warRaptors = gameState.queryManager.executeQuery({
@@ -141,6 +141,7 @@ const Set = generateSet(Faction.Dinosaurs, [
 	{
 		type: CardType.Action,
 		quantityInDeck: 2,
+		actionType: ActionCardType.StandardAction,
 
 		name: "Augmentation",
 		description: "One minion gains +4 power until the end of your turn.",
@@ -179,6 +180,7 @@ const Set = generateSet(Faction.Dinosaurs, [
 	{
 		type: CardType.Action,
 		quantityInDeck: 2,
+		actionType: ActionCardType.StandardAction,
 
 		name: "Howl",
 		description: "Each of your minions gains +1 power until the end of your turn",
@@ -221,6 +223,7 @@ const Set = generateSet(Faction.Dinosaurs, [
 	{
 		type: CardType.Action,
 		quantityInDeck: 1,
+		actionType: ActionCardType.StandardAction,
 
 		name: "Natural Selection",
 		description: "Choose one of your minions on a base. Destroy a minion there with less power than yours.",
@@ -255,6 +258,7 @@ const Set = generateSet(Faction.Dinosaurs, [
 	{
 		type: CardType.Action,
 		quantityInDeck: 1,
+		actionType: ActionCardType.StandardAction,
 
 		name: "Rampage",
 		description: "Reduce the breakpoint of a base by the power of one of your minions on that base until the end of the turn.",
@@ -276,7 +280,7 @@ const Set = generateSet(Faction.Dinosaurs, [
 						return
 					}
 
-					target.card_current_base?.addState({
+					target.parent_card()?.addState({
 						type: "reduce-breakpoint",
 						value: target.power,
 						expire: {
@@ -293,6 +297,7 @@ const Set = generateSet(Faction.Dinosaurs, [
 	{
 		type: CardType.Action,
 		quantityInDeck: 1,
+		actionType: ActionCardType.StandardAction,
 
 		name: "Survival of the Fittest",
 		description: "Destroy the lowest-power minion (you choose in case of a tie) on each base with a higher-power minion.",
@@ -364,6 +369,7 @@ const Set = generateSet(Faction.Dinosaurs, [
 	{
 		type: CardType.Action,
 		quantityInDeck: 1,
+		actionType: ActionCardType.PlayOnMinion,
 
 		name: "Tooth and Claw... and Guns",
 		description: "Play on a minion. Ongoing: If an another player's ability would affect this minion, destroy this card and the ability does not affect this minion for the rest of the turn.",
@@ -372,9 +378,10 @@ const Set = generateSet(Faction.Dinosaurs, [
 
 	{
 		type: CardType.Action,
+		actionType: ActionCardType.PlayOnMinion,
 		quantityInDeck: 1,
 
-		name: "Upgrade ",
+		name: "Upgrade",
 		description: "Play on a minion. Ongoing: This minion has +2 power.",
 		image: upgrade_image
 	},
@@ -382,6 +389,7 @@ const Set = generateSet(Faction.Dinosaurs, [
 	{
 		type: CardType.Action,
 		quantityInDeck: 1,
+		actionType: ActionCardType.PlayOnBase,
 
 		name: "Wildlife Preserve",
 		description: "Play on a base. Ongoing: Your minions here are not affected by other players’ actions.",

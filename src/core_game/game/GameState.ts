@@ -15,6 +15,9 @@ import { convertNumberToNumeral } from "./utils/convertNumberToNumeral"
 import { ClientGameAction, ClientGameState } from "../client_game/ClientGameState"
 import { GameCardStack } from "./GameCardStack"
 import assert from "assert"
+import { ActionCardType } from "../data/CardType"
+import { BaseGameCard } from "./cards/BaseGameCard"
+import { LingeringEffect } from "./LingeringEffects"
 
 export type PlayerID = number
 export type GameCardId = number
@@ -65,7 +68,7 @@ export class GameState {
 	nextPhase: GamePhase | undefined
 
 	currentAction: GameAction
-	
+
 	activatedEffectQueue: {card_id: GameCardId, effect: string}[]
 
 	cardNextId: GameCardId
@@ -78,6 +81,9 @@ export class GameState {
 	bases_deck: GameCardStack
 	in_play_bases: GameCardStack
 	bases_discard_pile: GameCardStack
+
+	// NEW TYPES
+	lingeringEffects: LingeringEffect[]
 
 	constructor(server: GameServer) {
 		this.server = server
@@ -115,6 +121,8 @@ export class GameState {
 		this.currentAction = observable.object({
 			type: GameCurrentActionType.None
 		})
+
+		this.lingeringEffects = []
 
 		makeAutoObservable(this, {
 			server: false
@@ -281,7 +289,7 @@ export class GameState {
 						}
 						
 						base.moveCard({
-							positionType: PositionType.basesDiscardPile
+							positionType: PositionType.BasesDiscardPile
 						})
 
 						const newBase = this.bases_deck.getTopCard()
@@ -444,24 +452,92 @@ export class GameState {
 		}
 
 		if (card.position.positionType === PositionType.Hand) {
-			this.players[playerID].actionPlays--
+			this.players[playerID].actionPlays -= 1
 
 			card.moveCard({
 				positionType: PositionType.isAboutToBePlayed,
 				playerID: card.owner_id
 			})
 
-			await card.onPlay()
+			switch (card.actionType) {
+				case ActionCardType.StandardAction: {
+					await card.onPlay()
+		
+					card.moveCard({
+						positionType: PositionType.DiscardPile,
+						playerID: card.owner_id
+					})
+					break
+				}
 
-			card.moveCard({
-				positionType: PositionType.DiscardPile,
-				playerID: card.owner_id
-			})
+				case ActionCardType.PlayOnMinion: {
+					let position: Position | undefined
+					const target = await this.pickTarget<MinionGameCard>(playerID, card.playTargetQuery!, "Choose a minion to play the action on!", true)
+					if (target !== null) {
+						position = {
+							positionType: PositionType.Minion,
+							minion_id: target.id
+						}
+					}
+
+					if (position === undefined) {
+						card.moveCard({
+							positionType: PositionType.DiscardPile,
+							playerID: card.owner_id
+						})
+						break
+					}
+
+					assert(position.positionType === PositionType.Minion, "The target is not a minion")
+					
+					card.moveCard(position)
+					await card.onPlay()
+										
+					break
+				}
+
+				case ActionCardType.PlayOnBase: {
+					let position: Position | undefined
+					const target = await this.pickTarget<BaseGameCard>(playerID, card.playTargetQuery!, "Choose a base to play the action on!", true)
+					if (target !== null) {
+						position = {
+							positionType: PositionType.Base,
+							base_id: target.id
+						}
+					}
+
+					if (position === undefined) {
+						card.moveCard({
+							positionType: PositionType.DiscardPile,
+							playerID: card.owner_id
+						})
+						break
+					}
+
+					assert(position.positionType === PositionType.Base, "The target is not a base")
+					
+					card.moveCard(position)
+					await card.onPlay()
+
+					break
+				}
+
+				default: {
+					throw new Error("This action type is not supported")
+				}
+			}
+
+			
 		}
 	}
 
 	playCard(card_id: number, playerID: PlayerID, newPosition?: Position) {
 		const card = this.getCard(card_id)
+
+		if (!card.isPlayable) {
+			throw new Error("Client Error: You can't play this card right now")
+		}
+
 		if (card.isMinionCard()) {
 			if (newPosition === undefined) {
 				throw new Error("[newPosition] is undefined")
@@ -518,5 +594,39 @@ export class GameState {
 			bases_discard_pile: this.bases_discard_pile.toClientGameCardArray(),
 			in_play_bases: this.in_play_bases.toClientGameCardArray()
 		}
+	}
+
+
+
+	generateGameState() {
+		this.copyEffects()
+
+		this.controlChangingEffects()
+
+		this.typeChangingEffects()
+
+		this.abilityEffects()
+	}
+
+	copyEffects() {
+		// TODO
+	}
+
+	controlChangingEffects() {
+
+	}
+
+	typeChangingEffects() {
+
+	}
+
+	abilityEffects() {
+		//STEP 1: naturalPowerEffects
+
+		//STEP 2: powerSettingEffects
+
+		//STEP 3: powerChangingEffects
+
+		//STEP 4: powerCounters		
 	}
 }

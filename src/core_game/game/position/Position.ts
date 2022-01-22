@@ -1,13 +1,15 @@
 import { PlayerID } from "../GameState"
 
-export type Position = NoPosition | HandPosition | DeckPosition | BasePosition | BoardPosition | DiscardPilePosition | BasesDeckPosition | AboutToBePlayedPosition | BasesDiscardPilePosition
+export type Position = NoPosition | HandPosition | DeckPosition | BasePosition | MinionPosition | BoardPosition | DiscardPilePosition | BasesDeckPosition | AboutToBePlayedPosition | BasesDiscardPilePosition
 
 export enum PositionType {
 	Base,
+	Minion,
+
 	isAboutToBePlayed,
 	Board,
 	BasesDeck,
-	basesDiscardPile,
+	BasesDiscardPile,
 	Hand,
 	DiscardPile,
 	Deck,
@@ -15,12 +17,16 @@ export enum PositionType {
 }
 
 export const FIELD_POSITIONS: PositionType[] = [
-	PositionType.Board, PositionType.Base
+	PositionType.Board, PositionType.Minion, PositionType.Base
 ]
 
 export interface BasePosition {
 	positionType: PositionType.Base
 	base_id: number
+}
+export interface MinionPosition {
+	positionType: PositionType.Minion
+	minion_id: number
 }
 
 export interface AboutToBePlayedPosition {
@@ -37,7 +43,7 @@ export interface BasesDeckPosition {
 }
 
 export interface BasesDiscardPilePosition {
-	positionType: PositionType.basesDiscardPile
+	positionType: PositionType.BasesDiscardPile
 }
 
 

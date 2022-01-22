@@ -4,7 +4,6 @@ import { action, computed, makeObservable, observable } from "mobx";
 import { GameCurrentActionType, GamePhase, GameState } from "../GameState";
 import { CardType } from "../../data/CardType";
 import { GameCard } from "./GameCard";
-import { BaseGameCard } from "./BaseGameCard";
 import { PositionType } from "../position/Position";
 import { PowerBoost } from "./GameCardState";
 
@@ -34,12 +33,10 @@ export class MinionGameCard extends GameCard {
 			isPlayable: computed,
 			owner: computed,
 			controller: computed,
+			parent_card: observable,
 
 			initializeEffects: action,
-			registerEffect: action,
-
-			// Specifici di minion
-			card_current_base: computed
+			registerEffect: action
 		});
 	}
 
@@ -55,7 +52,9 @@ export class MinionGameCard extends GameCard {
 			const value = typeof state.value === "number"
 				? state.value
 				: state.value(this, this.gameState)
-			cardPower += value
+			if (typeof value === "number") {
+				cardPower += value
+			}
 		}
 
 		return cardPower
@@ -88,17 +87,6 @@ export class MinionGameCard extends GameCard {
 		}
 
 		return false;
-	}
-	
-	get card_current_base(): BaseGameCard | undefined {
-		if (this.position.positionType !== PositionType.Base) {
-			return undefined
-		}
-		const base = this.gameState.getCard(this.position.base_id)
-		if (!base.isBaseCard()) {
-			throw new Error("Logic Error: The card is not a base")
-		}
-		return base
 	}
 
 

@@ -1,4 +1,4 @@
-import { CardType } from "../data/CardType";
+import { ActionCardType, CardType } from "../data/CardType";
 import { ActionGameCard } from "../game/cards/ActionGameCard";
 import { BaseGameCard } from "../game/cards/BaseGameCard";
 import { MinionGameCard } from "../game/cards/MinionGameCard";
@@ -23,6 +23,7 @@ export interface MinionDatabaseCardPrototype {
 
 export interface ActionDatabaseCardPrototype {
 	type: CardType.Action
+	actionType: ActionCardType
 	quantityInDeck: number
 
 	name: string
@@ -80,6 +81,7 @@ export function generateSet(faction: Faction, prototypes: DatabaseCardPrototypes
 				case CardType.Action: {
 					return new ActionDatabaseCard({
 						id: card_id,
+						actionType: prototype.actionType,
 						description: prototype.description,
 						image: prototype.image,
 						faction: faction,

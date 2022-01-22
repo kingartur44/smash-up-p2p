@@ -1,4 +1,4 @@
-import { CardType } from "../data/CardType"
+import { ActionCardType, CardType } from "../data/CardType"
 import { ActionGameCard } from "../game/cards/ActionGameCard"
 import { BaseGameCard } from "../game/cards/BaseGameCard"
 import { MinionGameCard } from "../game/cards/MinionGameCard"
@@ -53,6 +53,8 @@ export class MinionDatabaseCard extends DatabaseCard {
 
 export class ActionDatabaseCard extends DatabaseCard {
 	type: CardType.Action
+	actionType: ActionCardType
+	
 	id: string
 	name: string
 	description: string
@@ -63,11 +65,12 @@ export class ActionDatabaseCard extends DatabaseCard {
 	initializeEffects?: (card: ActionGameCard, gameState: GameState) => void
 
 	
-	constructor({id, name, description, image, faction, initializeEffects}: {id: string, name: string, description: string, image?: string, faction: string, initializeEffects?: (card: ActionGameCard, gameState: GameState) => void}) {
+	constructor({id, actionType, name, description, image, faction, initializeEffects}: {id: string, actionType: ActionCardType,  name: string, description: string, image?: string, faction: string, initializeEffects?: (card: ActionGameCard, gameState: GameState) => void}) {
 		super()
 
 		this.type = CardType.Action
 		this.id = id
+		this.actionType = actionType
 		this.name = name
 		this.description = description
 		this.image = image
